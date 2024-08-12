@@ -1,3 +1,3 @@
-# Discord Bot Boilerplate
+# BTD6 Maplist Bot
 
-Includes a Postgres connection & query, a simple cog for command management, and some templates for cogs.
+A Discord bot to check data with the BTD6 Maplist project.

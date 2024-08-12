@@ -1,9 +1,14 @@
+# Bot
+data
+
 # Discord
 config.py
 
 # Python
 __pycache__
 .idea
+venv
+tmp
 
 # Other
 .DS_Store
