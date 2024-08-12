@@ -101,7 +101,7 @@ class CogBase(commands.Cog):
         await asyncio.to_thread(
             self.__save_cog_state,
             self.qualified_name,
-            self.serialize_state()
+            await self.serialize_state()
         )
 
     async def _load_state(self) -> None:
