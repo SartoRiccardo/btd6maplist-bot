@@ -1,0 +1,10 @@
+# Discord
+config.py
+
+# Python
+__pycache__
+.idea
+
+# Other
+.DS_Store
+
