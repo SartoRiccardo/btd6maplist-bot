@@ -1,12 +1,9 @@
 TOKEN = "bot-token-here"
 APP_ID = "app-id-here"
 
-DB_USER = "postgres"
-DB_PSWD = "postgres"
-DB_HOST = "127.0.0.1"
-DB_NAME = "database"
+API_BASE_URL = "http://localhost:4000"
 
-DATA_PATH = "./data"  # Path to store non-volatile data such as cog states
+DATA_PATH = "data"  # Path to store non-volatile data such as cog states
 
 BOT_NAME = "Boilerplate bot"
 GH_REPO = "https://github.com/SartoRiccardo/discord-bot-boilerplate"

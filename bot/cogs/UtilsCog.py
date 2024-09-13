@@ -87,7 +87,7 @@ class UtilsCog(CogBase):
                             f"Found a bug? Yell at the maintainer or make [an issue on Github]({GH_REPO})!"
                             if len(GH_REPO) else ""
                         ) +
-                        f"\n\n-# Bot boilerplate by __Chime__ (@chimenea.mo)",
+                        f"\n\n-# Bot and website by __Chime__ (@chimenea.mo)",
             color=discord.Color.orange()
         )
         await interaction.response.send_message(embed=embed)

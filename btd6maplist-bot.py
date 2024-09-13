@@ -3,13 +3,12 @@ import discord
 import logging
 from datetime import datetime
 from pathlib import Path
-import bot.db.connection
 from bot import __version__
 from discord.ext import commands
 from config import TOKEN, APP_ID, DATA_PATH
 
 
-class CtTicketTracker(commands.Bot):
+class MaplistBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
         # intents.message_content = True
@@ -28,10 +27,10 @@ class CtTicketTracker(commands.Bot):
             os.mkdir("tmp")
 
     async def setup_hook(self):
-        await bot.db.connection.start()
         cogs = [
             "OwnerCog",
             "UtilsCog",
+            "MapInfoCog",
         ]
         for cog in cogs:
             await self.load_extension(f"bot.cogs.{cog}")
@@ -55,4 +54,4 @@ if __name__ == '__main__':
     data_path = Path(DATA_PATH)
     data_path.mkdir(parents=True, exist_ok=True)
 
-    CtTicketTracker().run(TOKEN, log_level=logging.ERROR)
+    MaplistBot().run(TOKEN, log_level=logging.ERROR)
