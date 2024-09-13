@@ -1,5 +1,18 @@
 
 
-class ExampleException(Exception):
+class MaplistResNotFound(Exception):
+    def __init__(self, resource_name: str):
+        super().__init__()
+        self.resource_name = resource_name
+
     def formatted_exc(self) -> str:
-        return "An example error was raised."
+        return f"Couldn't find the {self.resource_name} you're looking for!"
+
+
+class ErrorStatusCode(Exception):
+    def __init__(self, status_code: int):
+        super().__init__()
+        self.status_code = status_code
+
+    def formatted_exc(self) -> str:
+        return f"`[{self.status_code}]` Something weird happened!"

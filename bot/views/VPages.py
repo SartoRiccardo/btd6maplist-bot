@@ -44,8 +44,8 @@ class VPages(discord.ui.View):
 
         await self.og_interaction.edit_original_response(
             content=new_page[2],
-            embed=new_page[3],
-            view=VMapPages(
+            embeds=new_page[3] if new_page[3] is not None else [],
+            view=VPages(
                 self.og_interaction,
                 self.pages,
                 current_page=page_idx,

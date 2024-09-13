@@ -3,6 +3,7 @@ import discord
 import logging
 from datetime import datetime
 from pathlib import Path
+import bot.utils.http
 from bot import __version__
 from discord.ext import commands
 from config import TOKEN, APP_ID, DATA_PATH
@@ -35,6 +36,8 @@ class MaplistBot(commands.Bot):
         for cog in cogs:
             await self.load_extension(f"bot.cogs.{cog}")
 
+        await bot.utils.http.init_http_client()
+
     async def get_app_command(self, cmd_name: str) -> discord.app_commands.AppCommand or None:
         if self.synced_tree is None:
             self.synced_tree = await self.tree.fetch_commands()
@@ -47,6 +50,18 @@ class MaplistBot(commands.Bot):
                 if ln.startswith("__version__ = \""):
                     self.version = ln[len("__version__ = \""):-1]
                     return
+
+    async def get_or_fetch_user(self, uid: int) -> discord.User | None:
+        if uid < 10000:
+            return None
+
+        try:
+            usr = self.get_user(uid)
+            if not usr:
+                usr = await self.fetch_user(uid)
+            return usr
+        except (discord.NotFound, discord.HTTPException):
+            return None
 
 
 if __name__ == '__main__':
