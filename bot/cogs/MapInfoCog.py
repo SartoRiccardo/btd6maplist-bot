@@ -166,9 +166,9 @@ class MapInfoCog(CogBase):
                 for ext in ["jpg", "jpeg", "webp", "png"]
             ])
 
-        # ply_list = lcc_data["user_ids"][0]["name"] \
-        #     if len(lcc_data["user_ids"]) == 1 else \
-        #     "\n".join([f"- {usr['name']}" for usr in lcc_data["user_ids"]])
+        ply_list = lcc_data["users"][0]["name"] \
+            if len(lcc_data["users"]) == 1 else \
+            "\n".join([f"- {usr['name']}" for usr in lcc_data["users"]])
 
         format_emj = EmjIcons.format(lcc_data["format"])
         medals = [
@@ -191,10 +191,10 @@ class MapInfoCog(CogBase):
         )
         if is_proof_image:
             embed.set_image(url=lcc_data["lcc"]["proof"])
-        # embed.add_field(
-        #     name="Player" + ("s" if len(lcc_data["user_ids"]) > 1 else ""),
-        #     value=ply_list,
-        # )
+        embed.add_field(
+            name="Player" + ("s" if len(lcc_data["users"]) > 1 else ""),
+            value=ply_list,
+        )
 
         return emj, label, None, [embed]
 
