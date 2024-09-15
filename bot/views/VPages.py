@@ -1,6 +1,6 @@
 import discord
 from bot.types import EmbedPage
-from bot.views.components import PageSelector
+from .components import PageSelector
 
 
 class VPages(discord.ui.View):
