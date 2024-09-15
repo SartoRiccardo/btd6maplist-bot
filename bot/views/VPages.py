@@ -21,6 +21,7 @@ class VPages(discord.ui.View):
             self.pages,
             self.current_page,
             self.on_page_select,
+            owner=interaction.user,
         ))
 
     async def on_page_select(
@@ -28,14 +29,6 @@ class VPages(discord.ui.View):
             interaction: discord.Interaction,
             page_idx: int,
     ) -> None:
-        if interaction.user.id != self.og_interaction.user.id:
-            await interaction.response.send_message(
-                content=f"The command was executed by <@{self.og_interaction.user.id}>. "
-                        "Run the command yourself!",
-                ephemeral=True,
-            )
-            return
-
         new_page = self.pages[page_idx]
         await interaction.response.send_message(
             content=f"Showing **{new_page[0]} {new_page[1]}**",
