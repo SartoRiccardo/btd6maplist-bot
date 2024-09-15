@@ -1,7 +1,7 @@
 import asyncio
 import os
 import aiohttp_client_cache
-from config import DATA_PATH
+from config import DATA_PATH, API_BASE_URL
 
 
 client: aiohttp_client_cache.CachedSession | None = None
@@ -10,7 +10,7 @@ client: aiohttp_client_cache.CachedSession | None = None
 async def init_http_client():
     cache = aiohttp_client_cache.SQLiteBackend(
         cache_name=os.path.join(DATA_PATH, ".cache", "aiohttp-requests.db"),
-        expire_after=0,
+        expire_after=60*5,
         urls_expire_after={
             "data.ninjakiwi.com": 3600 * 24 * 7,
         },

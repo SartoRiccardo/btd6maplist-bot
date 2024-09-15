@@ -9,6 +9,7 @@ def autodoc(command: Callable):
     documented_fields = {
         "hide": (None, "Hides the message"),
         "map_id": ("map", "The map's code. Can also be its name, an alias or its list position."),
+        "game_format": ("format", "The Maplist format you want to check"),
     }
     cmd_args = inspect.getfullargspec(command).args
     renames = {}

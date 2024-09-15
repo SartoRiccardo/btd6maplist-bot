@@ -58,3 +58,9 @@ class EmjHeros(BaseEmjClass):
 
 class EmjMisc(BaseEmjClass):
     cash = ""
+
+
+class EmjPlacements(BaseEmjClass):
+    top1 = "🥇"
+    top2 = "🥈"
+    top3 = "🥉"
