@@ -10,6 +10,9 @@ def autodoc(command: Callable):
         "hide": (None, "Hides the message"),
         "map_id": ("map", "The map's code. Can also be its name, an alias or its list position."),
         "game_format": ("format", "The Maplist format you want to check"),
+        "no_optimal_hero": (None, "Check this if you didn't use the optimal hero"),
+        "black_border": (None, "Check this if you black bordered the map"),
+        "is_lcc": ("lcc", "Check this if your run is a LCC"),
     }
     cmd_args = inspect.getfullargspec(command).args
     renames = {}

@@ -56,13 +56,18 @@ class OwnerCog(commands.Cog, name="owner"):
 
     @commands.command()
     @is_owner()
-    async def sync(self, ctx: discord.ext.commands.Context, where: None or [Literal["."]] = None) -> None:
+    async def sync(self, ctx: discord.ext.commands.Context, where: None | Literal[".", "mlist"] = None) -> None:
+        where_str = "globally"
         if where == ".":
             synced = await ctx.bot.tree.sync(guild=ctx.guild)
+            where_str = "here"
+        elif where == "mlist":
+            synced = await ctx.bot.tree.sync(guild=discord.Object(config.MAPLIST_GID))
+            where_str = "in the Maplist"
         else:
             synced = await ctx.bot.tree.sync()
             self.bot.synced_tree = synced
-        await ctx.send(f"Synced {len(synced)} commands ({'globally' if where is None else 'here'}).")
+        await ctx.send(f"Synced {len(synced)} commands ({where_str}).")
 
     @commands.group(aliases=["cogs"])
     @is_owner()
