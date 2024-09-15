@@ -33,6 +33,7 @@ class MaplistBot(commands.Bot):
             "UtilsCog",
             "MapInfoCog",
             "LeaderboardCog",
+            "UserCog",
         ]
         for cog in cogs:
             await self.load_extension(f"bot.cogs.{cog}")

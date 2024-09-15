@@ -39,3 +39,19 @@ async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> dict:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
         return await resp.json()
+
+
+async def get_maplist_user(uid: int) -> dict:
+    async with http.client.get(f"{API_BASE_URL}/users/{uid}") as resp:
+        if resp.status == 404:
+            raise MaplistResNotFound("user")
+        if not resp.ok:
+            raise ErrorStatusCode(resp.status)
+        return await resp.json()
+
+
+async def get_user_completions(uid: int) -> dict:
+    async with http.client.get(f"{API_BASE_URL}/users/{uid}/completions") as resp:
+        if not resp.ok:
+            raise ErrorStatusCode(resp.status)
+        return await resp.json()
