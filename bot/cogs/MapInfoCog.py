@@ -121,7 +121,8 @@ class MapInfoCog(CogBase):
 
         if len(map_data["optimal_heros"]):
             hero_emojis = [EmjHeros.get(hr) for hr in map_data["optimal_heros"]]
-            description += f"\n**Optimal Heros:** {' '.join(hero_emojis)}\n"
+            description += f"\n**Optimal Heros**\n" \
+                           f"# {' '.join(hero_emojis)}\n"
 
         embed = discord.Embed(
             color=EMBED_CLR,
