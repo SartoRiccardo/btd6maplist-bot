@@ -77,6 +77,8 @@ class SubmissionCog(CogBase):
                 proposed
             )
 
+        modal = MapSubmissionModal(process_callback)
+
         # Note: this is an API call to the backend, it can only stay
         # within the 3-second Discord threshold because it's local, otherwise
         # it probably has to defer. But if it does, it can't show the modal.
@@ -85,15 +87,10 @@ class SubmissionCog(CogBase):
             return await interaction.response.send_message(
                 ephemeral=True,
                 content=rules_msg,
-                view=VRulesAccept(
-                    interaction,
-                    process_callback,
-                )
+                view=VRulesAccept(interaction, modal)
             )
 
-        await interaction.response.send_modal(
-            MapSubmissionModal(process_callback)
-        )
+        await interaction.response.send_modal(modal)
 
     @staticmethod
     async def process_map_subm(
@@ -236,27 +233,24 @@ class SubmissionCog(CogBase):
                 leftover,
             )
 
+        modal = RunSubmissionModal(
+            process_callback,
+            is_lcc=lcc,
+            req_video=lcc or no_optimal_hero or black_border,
+        )
+
         ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
         if not ml_user["has_seen_popup"]:
             return await interaction.response.send_message(
                 ephemeral=True,
                 content=rules_msg,
-                view=VRulesAccept(
-                    interaction,
-                    process_callback,
-                )
+                view=VRulesAccept(interaction, modal)
             )
 
-        await interaction.response.send_modal(
-            RunSubmissionModal(
-                process_callback,
-                is_lcc=lcc,
-                req_video=lcc or no_optimal_hero or black_border,
-            )
-        )
+        await interaction.response.send_modal(modal)
 
+    @staticmethod
     async def process_run_submission(
-            self,
             interaction: discord.Interaction,
             map_id: str,
             proof: discord.Attachment,

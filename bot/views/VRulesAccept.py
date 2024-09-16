@@ -1,6 +1,5 @@
 import discord
 from .components import OwnerButton
-from .modals import MapSubmissionModal
 
 
 class VRulesAccept(discord.ui.View):
@@ -8,11 +7,11 @@ class VRulesAccept(discord.ui.View):
     def __init__(
             self,
             interaction: discord.Interaction,
-            process_submission,
+            modal: discord.ui.Modal,
             timeout: float = None,
     ):
         super().__init__(timeout=timeout)
-        self.process_submission = process_submission
+        self.modal = modal
 
         self.add_item(OwnerButton(
             interaction.user,
@@ -23,6 +22,4 @@ class VRulesAccept(discord.ui.View):
 
     async def on_rules_read(self, interaction: discord.Interaction):
         # API call to accept the rules (launch task)...
-        await interaction.response.send_modal(
-            MapSubmissionModal(self.process_submission)
-        )
+        await interaction.response.send_modal(self.modal)
