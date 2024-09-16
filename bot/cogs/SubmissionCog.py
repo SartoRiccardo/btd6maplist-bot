@@ -62,6 +62,11 @@ class SubmissionCog(CogBase):
                 content=f"❌ Image size must be up to 2MB",
                 ephemeral=True,
             )
+        if proof.content_type.split("/")[-1].lower() not in ["webp", "png", "jpeg", "jpg"]:
+            return await interaction.response.send_message(
+                content=f"❌ Admissible image formats: `webp`, `png`, `jpg`",
+                ephemeral=True,
+            )
 
         def process_callback(interaction: discord.Interaction, notes: str):
             return self.process_map_subm(
