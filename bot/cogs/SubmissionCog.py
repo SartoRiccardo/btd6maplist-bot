@@ -4,7 +4,7 @@ from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
 from bot.utils.requests.maplist import submit_map, get_maplist_user
 from bot.views import VRulesAccept
-from bot.views.modals import MapSubmissionModal
+from bot.views.modals import MapSubmissionModal, RunSubmissionModal
 from bot.types import MapPlacement
 from bot.exceptions import BadRequest
 from config import MAPLIST_GID
@@ -207,8 +207,68 @@ class SubmissionCog(CogBase):
             black_border: bool = False,
             lcc: bool = False,
     ):
+        if proof.size > 2_000_000:
+            return await interaction.response.send_message(
+                content=f"❌ Image size must be up to 2MB",
+                ephemeral=True,
+            )
+        if proof.content_type.split("/")[-1].lower() not in ["webp", "png", "jpeg", "jpg"]:
+            return await interaction.response.send_message(
+                content=f"❌ Admissible image formats: `webp`, `png`, `jpg`",
+                ephemeral=True,
+            )
+
+        async def process_callback(
+                interaction: discord.Interaction,
+                notes: str | None,
+                vproof_url: str | None,
+                leftover: int | None
+        ):
+            await self.process_run_submission(
+                interaction,
+                map_id,
+                proof,
+                no_optimal_hero,
+                black_border,
+                lcc,
+                notes,
+                vproof_url,
+                leftover,
+            )
+
+        ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
+        if not ml_user["has_seen_popup"]:
+            return await interaction.response.send_message(
+                ephemeral=True,
+                content=rules_msg,
+                view=VRulesAccept(
+                    interaction,
+                    process_callback,
+                )
+            )
+
+        await interaction.response.send_modal(
+            RunSubmissionModal(
+                process_callback,
+                is_lcc=lcc,
+                req_video=lcc or no_optimal_hero or black_border,
+            )
+        )
+
+    async def process_run_submission(
+            self,
+            interaction: discord.Interaction,
+            map_id: str,
+            proof: discord.Attachment,
+            no_optimal_hero: bool,
+            black_border: bool,
+            is_lcc: bool,
+            notes: str | None,
+            vproof_url: str | None,
+            leftover: int | None,
+    ):
         await interaction.response.send_message(
-            content="`501`",
+            content="`[501]` Not yet implemented!",
             ephemeral=True,
         )
 
