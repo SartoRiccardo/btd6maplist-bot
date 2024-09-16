@@ -1,6 +1,7 @@
 # Bot
 data
 *.key
+*.pem
 
 # Discord
 config.py
