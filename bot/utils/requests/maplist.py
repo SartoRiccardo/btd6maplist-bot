@@ -64,8 +64,9 @@ async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> dict:
 
 
 async def get_maplist_user(uid: int, no_load_oak: bool = False) -> dict:
-    signature = sign(str(uid).encode())
-    qparams = {"signature": signature, "no_load_oak": no_load_oak}
+    message = f"{uid}{no_load_oak}"
+    signature = sign(message.encode())
+    qparams = {"signature": signature, "no_load_oak": str(no_load_oak)}
     url = f"{API_BASE_URL}/users/{uid}/bot?{urllib.parse.urlencode(qparams)}"
     async with http.client.get(url) as resp:
         if resp.status == 404:
