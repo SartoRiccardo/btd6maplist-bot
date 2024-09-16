@@ -1,6 +1,7 @@
 TOKEN = "bot-token-here"
 APP_ID = "app-id-here"
-PRIVKEY_PATH = "btd6maplist-bot.key"
+PRIVKEY_PATH = "btd6maplist-bot.pem"
+PRIVKEY_PSWD = None
 
 API_BASE_URL = "http://localhost:4000"
 WEB_BASE_URL = "http://localhost:3000"

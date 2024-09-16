@@ -1,10 +1,13 @@
 import asyncio
 import os
 import aiohttp_client_cache
-from config import DATA_PATH, API_BASE_URL
+import cryptography.hazmat.primitives.asymmetric.rsa
+from config import DATA_PATH, PRIVKEY_PATH, PRIVKEY_PSWD
+from cryptography.hazmat.primitives import serialization
 
 
 client: aiohttp_client_cache.CachedSession | None = None
+private_key: cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey | None = None
 
 
 async def init_http_client():
@@ -18,7 +21,14 @@ async def init_http_client():
     )
 
     async def init_session():
-        global client
+        global client, private_key
+
+        with open(PRIVKEY_PATH, "rb") as fin:
+            private_key = serialization.load_pem_private_key(
+                fin.read(),
+                password=PRIVKEY_PSWD,
+            )
+
         async with aiohttp_client_cache.CachedSession(cache=cache) as session:
             client = session
             while True:

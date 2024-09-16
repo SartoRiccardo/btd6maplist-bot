@@ -16,3 +16,15 @@ class ErrorStatusCode(Exception):
 
     def formatted_exc(self) -> str:
         return f"`[{self.status_code}]` Something weird happened!"
+
+
+class BadRequest(Exception):
+    def __init__(self, resp_json: dict):
+        super().__init__()
+        self.errors = resp_json["errors"]
+
+    def formatted_exc(self) -> str:
+        return "\n".join([
+            f"- `{key}`: {self.errors[key]}"
+            for key in self.errors
+        ])
