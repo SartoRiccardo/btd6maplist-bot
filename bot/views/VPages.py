@@ -30,10 +30,7 @@ class VPages(discord.ui.View):
             page_idx: int,
     ) -> None:
         new_page = self.pages[page_idx]
-        await interaction.response.send_message(
-            content=f"Showing **{new_page[0]} {new_page[1]}**",
-            ephemeral=True,
-        )
+        await interaction.response.defer(thinking=False)
 
         await self.og_interaction.edit_original_response(
             content=new_page[2],

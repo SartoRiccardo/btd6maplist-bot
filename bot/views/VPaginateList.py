@@ -95,29 +95,17 @@ class VPaginateList(discord.ui.View):
         )
 
     async def ff_back(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_message(
-            content="ⓘ Showing page **1**",
-            ephemeral=True,
-        )
+        await interaction.response.defer(thinking=False)
         await self.go_to_page(1)
 
     async def page_back(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_message(
-            content=f"ⓘ Showing page **{self.current_page-1}**",
-            ephemeral=True,
-        )
+        await interaction.response.defer(thinking=False)
         await self.go_to_page(self.current_page-1)
 
     async def page_next(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_message(
-            content=f"ⓘ Showing page **{self.current_page+1}**",
-            ephemeral=True,
-        )
+        await interaction.response.defer(thinking=False)
         await self.go_to_page(self.current_page+1)
 
     async def ff_next(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_message(
-            content=f"ⓘ Showing page **{self.total_pages}**",
-            ephemeral=True,
-        )
+        await interaction.response.defer(thinking=False)
         await self.go_to_page(self.total_pages)
