@@ -183,3 +183,21 @@ async def read_rules(user: discord.User) -> None:
     async with http.client.put(f"{API_BASE_URL}/read-rules/bot", json=payload) as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
+
+
+async def set_oak(user: discord.User, oak: str) -> None:
+    data = {
+        "user": {
+            "id": str(user.id),
+            "username": user.name,
+            "name": user.display_name,
+        },
+        "oak": oak,
+    }
+    data_str = json.dumps(data)
+    signature = sign(f"{user.id}{data_str}".encode())
+
+    payload = {"data": data_str, "signature": signature}
+    async with http.client.put(f"{API_BASE_URL}/users/{user.id}/bot", json=payload) as resp:
+        if not resp.ok:
+            raise ErrorStatusCode(resp.status)

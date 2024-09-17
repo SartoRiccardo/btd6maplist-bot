@@ -4,9 +4,10 @@ import discord
 from discord.ext import commands
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
-from bot.utils.requests.maplist import get_maplist_user, get_user_completions
+from bot.utils.requests.maplist import get_maplist_user, get_user_completions, set_oak
+from bot.utils.requests.ninjakiwi import get_btd6_user
 from bot.exceptions import MaplistResNotFound
-from config import EMBED_CLR, MAPLIST_INVITE
+from config import EMBED_CLR
 from bot.utils.emojis import EmjMedals, EmjIcons, EmjPlacements
 
 
@@ -27,7 +28,7 @@ placements_emojis = {
 
 class UserCog(CogBase):
     help_descriptions = {
-        "verify": "Verify your BTD6 profile!",
+        "oak": "Verify your BTD6 profile!",
     }
 
     def __init__(self, bot: commands.Bot):
@@ -113,7 +114,7 @@ class UserCog(CogBase):
         if user.id == interaction.user.id:
             embed.set_footer(
                 text="You can set a profile picture either through the website "
-                     "or the /verify command"
+                     "or the /oak command"
             )
 
         if not something:
@@ -124,7 +125,7 @@ class UserCog(CogBase):
         )
 
     @discord.app_commands.command(
-        name="verify",
+        name="oak",
         description="Verify who you are in Bloons TD 6!",
     )
     @discord.app_commands.describe(
@@ -134,18 +135,14 @@ class UserCog(CogBase):
     async def cmd_verify(self, interaction: discord.Interaction, str_oak: str = None):
         instructions = "__**About verification**__\n" \
                        "To know who you are, I need your **Open Access Key (OAK)**. This is a bit of text that " \
-                       "allows me to see a lot of things about you in-game, like your profile, your team, and " \
-                       "more. It's perfectly safe though, Ninja Kiwi takes privacy very seriously, so I can't do " \
-                       "anything bad with it even if I wanted to!\n\n" \
+                       "allows me to see your ingame profile picture and stats and things like that.\n\n" \
                        "__**Generate your OAK**__\n" \
-                       "🔹 Open Bloons TD 6 (or Battles 2) > Settings > My Account > Open Data API (it's a small " \
+                       "🔹 Open Bloons TD 6 (or any NK game) > Settings > My Account > Open Data API (it's a small " \
                        "link in the bottom right) > Generate Key. Your OAK should look something like " \
                        "`oak_h6ea...p1hr`.\n" \
                        "🔹 Copy it (note: the \"Copy\" button doesn't work, so just manually select it and do ctrl+C) " \
-                       "and, do /verify and paste your OAK as a parameter. Congrats, you have verified yourself!\n\n" \
-                       "__**What if I have alts?**__\n" \
-                       "You can register multiple accounts! One of them will be your \"main one\" which will be used " \
-                       "as the default for all commands (you can choose which one via the /verify main command).\n\n" \
+                       "and, do /oak and paste your OAK as a parameter.\n" \
+                       "🔹 Congrats, you have verified yourself!\n\n" \
                        "__**More information**__\n" \
                        "Ninja Kiwi talking about OAKs: https://support.ninjakiwi.com/hc/en-us/articles/13438499873937\n"
 
@@ -155,23 +152,24 @@ class UserCog(CogBase):
                 ephemeral=True,
             )
 
-        if re.match(r"oak_[\da-z]{32}", str_oak) is None:
-            return await interaction.edit_original_response(
-                content="Your OAK is not well formatted! it should be `oak_` followed by 32 numbers and/or lowercase "
+        if re.match(r"oak_[\da-z]+", str_oak) is None:
+            return await interaction.response.send_message(
+                content="Your OAK is not well formatted! it should be `oak_` followed by some numbers and/or lowercase "
                         "letters!\n\n"
                         "*Don't know what an OAK is? Leave the field blank to get a help message!*",
             )
 
         await interaction.response.defer(ephemeral=True)
-        # try:
-        #     # Make a call to the Maplist API
-        #     pass
-        # except bloonspy.exceptions.NotFound:
-        #     await interaction.edit_original_response(
-        #         content="Couldn't find a BTD6 user with that OAK!\n"
-        #                 "-# Are you sure it's the correct one?",
-        #     )
-        await interaction.response.edit_original_response(content="`501`")
+        if await get_btd6_user(str_oak) is None:
+            return await interaction.edit_original_response(
+                content="Couldn't find a BTD6 user with that OAK!\n"
+                        "-# Are you sure it's the correct one?",
+            )
+
+        await set_oak(interaction.user, str_oak)
+        await interaction.edit_original_response(
+            content="✅ You OAK was set correctly! Your profile picture should appear in a bit!"
+        )
 
 
 async def setup(bot: commands.Bot) -> None:
