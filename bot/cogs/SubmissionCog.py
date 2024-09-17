@@ -6,7 +6,7 @@ from bot.utils.requests.maplist import submit_map, get_maplist_user, submit_run,
 from bot.views import VRulesAccept
 from bot.views.modals import MapSubmissionModal, RunSubmissionModal
 from bot.types import MapPlacement
-from bot.exceptions import BadRequest
+from bot.exceptions import BadRequest, MaplistResNotFound
 from config import MAPLIST_GID
 
 
@@ -239,8 +239,12 @@ class SubmissionCog(CogBase):
             req_video=lcc or no_optimal_hero or black_border,
         )
 
-        ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
-        if not not ml_user["has_seen_popup"]:
+        try:
+            ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
+        except MaplistResNotFound:
+            ml_user = None
+
+        if ml_user is None or not ml_user["has_seen_popup"]:
             return await interaction.response.send_message(
                 ephemeral=True,
                 content=rules_msg,

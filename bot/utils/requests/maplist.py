@@ -90,7 +90,7 @@ async def submit_map(
         proof: discord.Attachment,
         map_type: str,
         proposed_diff: int,
-):
+) -> None:
     data = {
         "submitter": {
             "id": user.id,
@@ -133,7 +133,7 @@ async def submit_run(
         vproof_url: str | None,
         leftover: int | None,
         run_format: int,
-):
+) -> None:
     data = {
         "submitter": {
             "id": user.id,
@@ -168,9 +168,13 @@ async def submit_run(
             raise ErrorStatusCode(resp.status)
 
 
-async def read_rules(user_id: int):
+async def read_rules(user: discord.User) -> None:
     data = {
-        "id": user_id,
+        "user": {
+            "id": str(user.id),
+            "username": user.name,
+            "name": user.display_name,
+        },
     }
     data_str = json.dumps(data)
     signature = sign(data_str.encode())
