@@ -7,6 +7,7 @@ import bot.utils.http
 from bot import __version__
 from discord.ext import commands
 from config import TOKEN, APP_ID, DATA_PATH
+from bot.utils.colors import purple
 
 
 class MaplistBot(commands.Bot):
@@ -40,6 +41,7 @@ class MaplistBot(commands.Bot):
             await self.load_extension(f"bot.cogs.{cog}")
 
         await bot.utils.http.init_http_client()
+        print(f"{purple('[BTD6Maplist Bot]')} Started!")
 
     async def get_app_command(self, cmd_name: str) -> discord.app_commands.AppCommand or None:
         if self.synced_tree is None:

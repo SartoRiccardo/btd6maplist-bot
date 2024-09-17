@@ -4,6 +4,7 @@ import aiohttp_client_cache
 import cryptography.hazmat.primitives.asymmetric.rsa
 from config import DATA_PATH, PRIVKEY_PATH, PRIVKEY_PSWD
 from cryptography.hazmat.primitives import serialization
+from bot.utils.colors import purple
 
 
 client: aiohttp_client_cache.CachedSession | None = None
@@ -28,9 +29,11 @@ async def init_http_client():
                 fin.read(),
                 password=PRIVKEY_PSWD,
             )
+            print(f"{purple('[HTTP]')} Loaded private key")
 
         async with aiohttp_client_cache.CachedSession(cache=cache) as session:
             client = session
+            print(f"{purple('[HTTP]')} Started session")
             while True:
                 await session.delete_expired_responses()
                 await asyncio.sleep(3600 * 24 * 5)
