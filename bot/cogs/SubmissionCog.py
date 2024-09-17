@@ -1,13 +1,16 @@
+import asyncio
+import re
 import discord
 from discord.ext import commands
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
-from bot.utils.requests.maplist import submit_map, get_maplist_user, submit_run, get_maplist_map
+from bot.utils.handlers import handle_error
+from bot.utils.requests.maplist import submit_map, get_maplist_user, submit_run, get_maplist_map, accept_run
 from bot.views import VRulesAccept
 from bot.views.modals import MapSubmissionModal, RunSubmissionModal
 from bot.types import MapPlacement
 from bot.exceptions import BadRequest, MaplistResNotFound
-from config import MAPLIST_GID
+from config import MAPLIST_GID, WH_RUN_SUBMISSION_IDS, MAPLIST_ROLES, WEB_BASE_URL
 
 
 list_rules_url = "https://discord.com/channels/1162188507800944761/1162193272320569485/1272011602228678747"
@@ -24,6 +27,63 @@ class SubmitGroup(discord.app_commands.Group):
     pass
 
 
+@discord.app_commands.context_menu(name="Accept Completion")
+@discord.app_commands.guilds(MAPLIST_GID)
+async def ctxm_accept_submission(interaction: discord.Interaction, message: discord.Message):
+    if message.webhook_id is None or \
+            not len(message.embeds) or \
+            message.embeds[0].footer.text is None or \
+            (run_match := re.match(r"Run No\.(\d+)", message.embeds[0].footer.text)) is None:
+        return await interaction.response.send_message(
+            content="That's not a submission?",
+            ephemeral=True,
+        )
+    run_id = int(run_match.group(1))
+
+    subm_type = None
+    for key in WH_RUN_SUBMISSION_IDS:
+        if message.webhook_id in WH_RUN_SUBMISSION_IDS[key]:
+            subm_type = key
+            break
+
+    if subm_type is None:
+        return await interaction.response.send_message(
+            content="That's not a submission?",
+            ephemeral=True,
+        )
+
+    has_perms = False
+    for rl in interaction.user.roles:
+        if rl.id in (MAPLIST_ROLES["admin"] + MAPLIST_ROLES[f"{subm_type}_mod"]):
+            has_perms = True
+            break
+    if not has_perms:
+        return await interaction.response.send_message(
+            content=f"You are not a {subm_type} mod",
+            ephemeral=True,
+        )
+
+    await interaction.response.defer(ephemeral=True)
+    alr_accepted = True
+    try:
+        await accept_run(interaction.user, run_id)
+        alr_accepted = False
+    except BadRequest:
+        pass
+    await asyncio.gather(
+        interaction.edit_original_response(
+            content="That run was already accepted!"
+                    if alr_accepted else
+                    "✅ Submitted successfully!\n"
+                    f"You can edit it [on the website]({WEB_BASE_URL}/completions/{run_id}) if needed.",
+        ),
+        message.add_reaction("✅"),
+    )
+
+
+ctxm_accept_submission.error(handle_error)
+
+
 class SubmissionCog(CogBase):
     submit = SubmitGroup(
         name="submit",
@@ -36,6 +96,11 @@ class SubmissionCog(CogBase):
 
     def __init__(self, bot: commands.Bot):
         super().__init__(bot)
+        self.bot.tree.add_command(ctxm_accept_submission)
+
+    async def cog_unload(self) -> None:
+        await super().cog_load()
+        self.bot.tree.remove_command(ctxm_accept_submission.name)
 
     @submit.command(
         name="map",

@@ -201,3 +201,22 @@ async def set_oak(user: discord.User, oak: str) -> None:
     async with http.client.put(f"{API_BASE_URL}/users/{user.id}/bot", json=payload) as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
+
+
+async def accept_run(who: discord.User, run_id: int) -> None:
+    data = {
+        "user": {
+            "id": str(who.id),
+            "username": who.name,
+            "name": who.display_name,
+        },
+    }
+    data_str = json.dumps(data)
+    signature = sign(f"{run_id}{data_str}".encode())
+
+    payload = {"data": data_str, "signature": signature}
+    async with http.client.post(f"{API_BASE_URL}/completions/{run_id}/accept/bot", json=payload) as resp:
+        if resp.status == 400:
+            raise BadRequest(await resp.json())
+        if not resp.ok:
+            raise ErrorStatusCode(resp.status)

@@ -14,8 +14,17 @@ BOT_NAME = "Boilerplate bot"
 GH_REPO = "https://github.com/SartoRiccardo/discord-bot-boilerplate"
 EMBED_CLR = 0xffd54f
 MAPLIST_GID = 1162188507800944761
+MAPLIST_ROLES: dict[str, list[int]] = {
+    "admin": [],
+    "expert_mod": [],
+    "list_mod": [],
+}
+WH_RUN_SUBMISSION_IDS: dict[str, list[int]] = {
+    "expert": [],
+    "list": [],
+}
 
 # Will have access to the commands in bot/cogs/OwnerCog.py
-CO_OWNER_IDS = [
+CO_OWNER_IDS: list[int] = [
 
 ]
