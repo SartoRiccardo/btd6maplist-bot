@@ -1,8 +1,9 @@
 import discord
 from bot.types import SubmitMapModalCb
+from .ModalBase import ModalBase
 
 
-class MapSubmissionModal(discord.ui.Modal, title="Submit a Map"):
+class MapSubmissionModal(ModalBase, title="Submit a Map"):
     notes = discord.ui.TextInput(
         label="Notes",
         placeholder="Additional notes about the map, if any (creators, verifiers, ...)",

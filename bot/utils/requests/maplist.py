@@ -120,3 +120,49 @@ async def submit_map(
             raise BadRequest(await resp.json())
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
+
+
+async def submit_run(
+        user: discord.User,
+        map_id: str,
+        proof: discord.Attachment,
+        no_optimal_hero: bool,
+        black_border: bool,
+        is_lcc: bool,
+        notes: str | None,
+        vproof_url: str | None,
+        leftover: int | None,
+        run_format: int,
+):
+    data = {
+        "submitter": {
+            "id": user.id,
+            "username": user.name,
+            "avatar_url": user.avatar.url,
+        },
+        "format": run_format,
+        "notes": notes,
+        "black_border": black_border,
+        "no_geraldo": no_optimal_hero,
+        "current_lcc": is_lcc,
+        "leftover": leftover,
+        "video_proof_url": vproof_url,
+    }
+    data_str = json.dumps(data)
+    proof_contents = await proof.read()
+    signature = sign((map_id+data_str).encode() + proof_contents)
+
+    form_data = FormData()
+    form_data.add_field(
+        "proof_completion",
+        io.BytesIO(proof_contents),
+        filename=proof.filename,
+        content_type=proof.content_type,
+    )
+    form_data.add_field("data", json.dumps({"data": data_str, "signature": signature}))
+
+    async with http.client.post(f"{API_BASE_URL}/maps/{map_id}/completions/submit/bot", data=form_data) as resp:
+        if resp.status == 400:
+            raise BadRequest(await resp.json())
+        if not resp.ok:
+            raise ErrorStatusCode(resp.status)

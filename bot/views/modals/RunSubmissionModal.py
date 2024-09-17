@@ -3,9 +3,10 @@ from bot.utils.formulas import is_link
 from bot.types import SubmitRunModalCb
 import bot.views
 from bot.utils.emojis import EmjMisc
+from .ModalBase import ModalBase
 
 
-class RunSubmissionModal(discord.ui.Modal, title="Submit a Completion"):
+class RunSubmissionModal(ModalBase, title="Submit a Completion"):
     def __init__(
             self,
             submit_cb: SubmitRunModalCb,
@@ -78,8 +79,8 @@ class RunSubmissionModal(discord.ui.Modal, title="Submit a Completion"):
             )
 
         notes = self.notes.value
-        vproof_url = self.vproof_url.value if self.vproof_url else None,
-        saveup = int(self.lcc_saveup.value) if self.lcc_saveup else None,
+        vproof_url = self.vproof_url.value if self.vproof_url else None
+        saveup = int(self.lcc_saveup.value) if self.lcc_saveup else None
 
         await self.submit_cb(
             interaction,

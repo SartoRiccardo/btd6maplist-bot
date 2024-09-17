@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
-from bot.utils.requests.maplist import submit_map, get_maplist_user
+from bot.utils.requests.maplist import submit_map, get_maplist_user, submit_run, get_maplist_map
 from bot.views import VRulesAccept
 from bot.views.modals import MapSubmissionModal, RunSubmissionModal
 from bot.types import MapPlacement
@@ -261,10 +261,32 @@ class SubmissionCog(CogBase):
             vproof_url: str | None,
             leftover: int | None,
     ):
-        await interaction.response.send_message(
-            content="`[501]` Not yet implemented!",
-            ephemeral=True,
-        )
+        await interaction.response.defer(thinking=True, ephemeral=True)
+
+        map_id = map_id.upper()
+        ml_map = await get_maplist_map(map_id)
+        run_format = 1 if ml_map["difficulty"] == -1 else 51
+
+        try:
+            await submit_run(
+                interaction.user,
+                map_id,
+                proof,
+                no_optimal_hero,
+                black_border,
+                is_lcc,
+                notes,
+                vproof_url,
+                leftover,
+                run_format,
+            )
+            await interaction.edit_original_response(
+                content="✅ Your map was submitted!",
+            )
+        except BadRequest as exc:
+            await interaction.edit_original_response(
+                content=f"❌ Something went wrong: \n{exc.formatted_exc()}",
+            )
 
 
 async def setup(bot: commands.Bot) -> None:
