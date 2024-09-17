@@ -57,7 +57,7 @@ class EmjHeros(BaseEmjClass):
 
 
 class EmjMisc(BaseEmjClass):
-    cash = ""
+    cash = "<a:cash:1148694623192105010>"
     blank = "<:_:1121392589204094976>"
 
 
