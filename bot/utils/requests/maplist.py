@@ -166,3 +166,16 @@ async def submit_run(
             raise BadRequest(await resp.json())
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
+
+
+async def read_rules(user_id: int):
+    data = {
+        "id": user_id,
+    }
+    data_str = json.dumps(data)
+    signature = sign(data_str.encode())
+
+    payload = {"data": data_str, "signature": signature}
+    async with http.client.put(f"{API_BASE_URL}/read-rules/bot", json=payload) as resp:
+        if not resp.ok:
+            raise ErrorStatusCode(resp.status)

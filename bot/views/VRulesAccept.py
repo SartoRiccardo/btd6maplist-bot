@@ -1,5 +1,7 @@
+import asyncio
 import discord
 from .components import OwnerButton
+from bot.utils.requests.maplist import read_rules
 
 
 class VRulesAccept(discord.ui.View):
@@ -12,6 +14,8 @@ class VRulesAccept(discord.ui.View):
     ):
         super().__init__(timeout=timeout)
         self.modal = modal
+        self.og_interaction = interaction
+        self.read = False
 
         self.add_item(OwnerButton(
             interaction.user,
@@ -20,6 +24,17 @@ class VRulesAccept(discord.ui.View):
             label="I have read the rules",
         ))
 
+    async def delete_og_interaction(self):
+        og_resp = await self.og_interaction.original_response()
+        await og_resp.delete()
+
+    async def interaction_check(self, _i: discord.Interaction, /) -> bool:
+        return not self.read
+
     async def on_rules_read(self, interaction: discord.Interaction):
-        # API call to accept the rules (launch task)...
-        await interaction.response.send_modal(self.modal)
+        self.read = True
+        asyncio.create_task(read_rules(interaction.user.id))
+        await asyncio.gather(
+            self.delete_og_interaction(),
+            interaction.response.send_modal(self.modal),
+        )

@@ -240,7 +240,7 @@ class SubmissionCog(CogBase):
         )
 
         ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
-        if not ml_user["has_seen_popup"]:
+        if not not ml_user["has_seen_popup"]:
             return await interaction.response.send_message(
                 ephemeral=True,
                 content=rules_msg,
