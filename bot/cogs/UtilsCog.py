@@ -69,8 +69,17 @@ class UtilsCog(CogBase):
     @discord.app_commands.command(name="invite",
                                   description=f"Invite {BOT_NAME} to your server!")
     async def cmd_invite(self, interaction: discord.Interaction) -> None:
-        perms = "8"
-        url = f"https://discord.com/api/oauth2/authorize?client_id={APP_ID}&permissions={perms}&scope=bot"
+        perms = discord.Permissions(
+            embed_links=True,
+            attach_files=True,
+            use_external_emojis=True,
+            add_reactions=True,
+        )
+        url = f"https://discord.com/api/oauth2/authorize?" \
+              f"client_id={APP_ID}" \
+              f"&permissions={perms.value}" \
+              f"&scope=bot" \
+              f"&integration_type=0"
         await interaction.response.send_message(
             content=f"Wanna invite me to your server? Use [this invite link]({url})!"
         )

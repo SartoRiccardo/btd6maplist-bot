@@ -356,7 +356,7 @@ class SubmissionCog(CogBase):
                 run_format,
             )
             await interaction.edit_original_response(
-                content="✅ Your map was submitted!",
+                content="✅ Your completion was submitted!",
             )
         except BadRequest as exc:
             await interaction.edit_original_response(
