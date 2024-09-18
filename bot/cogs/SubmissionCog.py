@@ -70,14 +70,11 @@ async def ctxm_accept_submission(interaction: discord.Interaction, message: disc
         alr_accepted = False
     except BadRequest:
         pass
-    await asyncio.gather(
-        interaction.edit_original_response(
-            content="That run was already accepted!"
-                    if alr_accepted else
-                    "✅ Submitted successfully!\n"
-                    f"You can edit it [on the website]({WEB_BASE_URL}/completions/{run_id}) if needed.",
-        ),
-        message.add_reaction("✅"),
+    await interaction.edit_original_response(
+        content="That run was already accepted!"
+                if alr_accepted else
+                "✅ Submitted successfully!\n"
+                f"You can edit it [on the website]({WEB_BASE_URL}/completions/{run_id}) if needed.",
     )
 
 
