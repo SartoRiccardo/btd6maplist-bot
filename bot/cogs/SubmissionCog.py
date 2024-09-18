@@ -128,7 +128,7 @@ class SubmissionCog(CogBase):
             proposed: MapPlacement,
             proof: discord.Attachment,
     ):
-        if proof.size > 2_000_000:
+        if proof.size > 1024**2 * 2:
             return await interaction.response.send_message(
                 content=f"❌ Image size must be up to 2MB",
                 ephemeral=True,
@@ -275,7 +275,7 @@ class SubmissionCog(CogBase):
             black_border: bool = False,
             lcc: bool = False,
     ):
-        if proof.size > 2_000_000:
+        if proof.size > 1024**2 * 2:
             return await interaction.response.send_message(
                 content=f"❌ Image size must be up to 2MB",
                 ephemeral=True,
