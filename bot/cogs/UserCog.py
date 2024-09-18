@@ -28,6 +28,7 @@ placements_emojis = {
 
 class UserCog(CogBase):
     help_descriptions = {
+        "profile": "Check an user's (or your own) profile!",
         "oak": "Verify your BTD6 profile!",
     }
 
@@ -35,15 +36,15 @@ class UserCog(CogBase):
         super().__init__(bot)
 
     @discord.app_commands.command(
-        name="user",
+        name="profile",
         description="Check an user's Maplist stats",
     )
     @discord.app_commands.describe(user="The user to check")
     @autodoc
-    async def cmd_user(
+    async def cmd_profile(
             self,
             interaction: discord.Interaction,
-            user: discord.User,
+            user: discord.User = None,
             hide: bool = False,
     ):
         if user == self.bot.user:
@@ -51,19 +52,7 @@ class UserCog(CogBase):
                 content="That's me!",
                 ephemeral=True,
             )
-        await self.send_user_profile(interaction, user, hide)
-
-    @discord.app_commands.command(
-        name="profile",
-        description="Check your own profile!",
-    )
-    @autodoc
-    async def cmd_profile(
-            self,
-            interaction: discord.Interaction,
-            hide: bool = False,
-    ):
-        await self.send_user_profile(interaction, interaction.user, hide)
+        await self.send_user_profile(interaction, interaction.user if user is None else user, hide)
 
     async def send_user_profile(
             self,
