@@ -13,8 +13,10 @@ from bot.utils.formulas import points
 
 class MapInfoCog(CogBase):
     help_descriptions = {
-        "invite": "Invite the bot to your server!",
-        "info": "General info about the bot.",
+        "map": "Overview of list map.\nYou can pass as a parameter the code, the Maplist position, "
+               "the map name, or an alias. *This works for all commands that ask for a map.*",
+        "lcc": "Get the current LCC for a map.",
+        "start": "Small guide on how to start on a map (if any)",
     }
 
     def __init__(self, bot: commands.Bot) -> None:

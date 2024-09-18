@@ -22,6 +22,10 @@ placements_emojis = {
 
 
 class LeaderboardCog(CogBase):
+    help_descriptions = {
+        "leaderboard": "Get the Maplist leaderboard. You can choose format and page.",
+    }
+
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__(bot)
 

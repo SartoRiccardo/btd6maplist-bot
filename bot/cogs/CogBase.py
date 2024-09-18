@@ -1,10 +1,8 @@
 import re
 import os
-import io
 import json
 import discord
 import asyncio
-import traceback
 from typing import Any
 from config import DATA_PATH
 from datetime import datetime
@@ -14,7 +12,7 @@ from bot.utils.handlers import handle_error
 
 class CogBase(commands.Cog):
     has_help_msg: bool = True
-    help_descriptions: dict[str or None, str or dict[str, str]] = {}
+    help_descriptions: dict[str | None, str | dict[str, str]] = {}
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot

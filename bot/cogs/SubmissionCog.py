@@ -85,14 +85,20 @@ ctxm_accept_submission.error(handle_error)
 
 
 class SubmissionCog(CogBase):
+    help_descriptions = {
+        "submit": {
+            "map": "Submit a map to either the Maplist or the Expert list!\n"
+                   "-# If you wanna submit it to both, run the command twice.",
+            "run": "Submit a completion to a maplist map. If required, you'll be asked for video proof "
+                   "and your Round 100 saveup.",
+            "lcc": "Shortcut for [[submit run]] with the `lcc` parameter set to `True`.",
+        },
+    }
+
     submit = SubmitGroup(
         name="submit",
         description="Submit something to the Maplist",
-
     )
-    help_descriptions = {
-        "verify": "Verify your BTD6 profile!",
-    }
 
     def __init__(self, bot: commands.Bot):
         super().__init__(bot)

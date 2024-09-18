@@ -64,7 +64,7 @@ class UtilsCog(CogBase):
     @discord.app_commands.command(name="github",
                                   description="Get the bot's repo")
     async def cmd_github(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_message("https://github.com/SartoRiccardo/ct-ticket-tracker/")
+        await interaction.response.send_message(GH_REPO)
 
     @discord.app_commands.command(name="invite",
                                   description=f"Invite {BOT_NAME} to your server!")
