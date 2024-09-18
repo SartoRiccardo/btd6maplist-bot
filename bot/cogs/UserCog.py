@@ -103,7 +103,7 @@ class UserCog(CogBase):
             description = f'- {int(prf["points"]) if prf["points"].is_integer() else prf["points"]}pt ' + \
                           placements_emojis.get(prf["pts_placement"], f'(#{prf["pts_placement"]})')
             if prf["lccs"]:
-                description += f'\n- {int(prf["lccs"]) if prf["lccs"].is_integer() else prf["lccs"]}pt ' + \
+                description += f'\n- {int(prf["lccs"]) if prf["lccs"].is_integer() else prf["lccs"]} LCCs ' + \
                                placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
 
             embed.add_field(

@@ -1,5 +1,5 @@
 import discord
-from config import APP_ID, GH_REPO, BOT_NAME
+from config import APP_ID, GH_REPO, BOT_NAME, EMBED_CLR
 from discord.ext import commands
 from bot.cogs.CogBase import CogBase
 
@@ -97,7 +97,7 @@ class UtilsCog(CogBase):
                             if len(GH_REPO) else ""
                         ) +
                         f"\n\n-# Bot and website by __Chime__ (@chimenea.mo)",
-            color=discord.Color.orange()
+            color=EMBED_CLR,
         )
         await interaction.response.send_message(embed=embed)
 
