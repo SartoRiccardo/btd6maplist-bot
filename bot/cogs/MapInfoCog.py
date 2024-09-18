@@ -106,7 +106,7 @@ class MapInfoCog(CogBase):
 
         diff_parts = []
         if map_data["difficulty"] != -1:
-            diff_str = ["Casual", "Medium", "Hard", "True"][map_data["difficulty"]]
+            diff_str = ["Casual", "Medium", "High", "True"][map_data["difficulty"]]
             diff_parts.append(
                 f"{EmjIcons.diff_by_index(map_data['difficulty'])} {diff_str} Expert"
             )

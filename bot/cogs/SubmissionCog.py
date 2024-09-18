@@ -184,9 +184,9 @@ class SubmissionCog(CogBase):
                 "Experts / Casual Expert",
                 "Experts / Casual-Medium",
                 "Experts / Medium Expert",
-                "Experts / Medium-Hard",
-                "Experts / Hard Expert",
-                "Experts / Hard-True",
+                "Experts / Medium-High",
+                "Experts / High Expert",
+                "Experts / High-True",
                 "Experts / True Expert",
             ],
         }
