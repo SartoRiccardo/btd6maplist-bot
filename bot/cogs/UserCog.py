@@ -8,7 +8,7 @@ from bot.utils.requests.maplist import get_maplist_user, get_user_completions, s
 from bot.utils.requests.ninjakiwi import get_btd6_user
 from bot.exceptions import MaplistResNotFound
 from config import EMBED_CLR
-from bot.utils.emojis import EmjMedals, EmjIcons, EmjPlacements
+from bot.utils.emojis import EmjMedals, EmjIcons, EmjPlacements, EmjMisc
 
 
 empty_profile = {
@@ -107,7 +107,7 @@ class UserCog(CogBase):
             )
 
         if not something:
-            embed.description = "-# Not much going on here..."
+            embed.description = f"-# Not much going on here...\n\n\n\n{EmjMisc.blank}"
 
         await interaction.edit_original_response(
             embed=embed,
