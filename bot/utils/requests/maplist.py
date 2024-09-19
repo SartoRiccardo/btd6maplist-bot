@@ -218,6 +218,8 @@ async def accept_run(who: discord.User, run_id: int) -> None:
     async with http.client.post(f"{API_BASE_URL}/completions/{run_id}/accept/bot", json=payload) as resp:
         if resp.status == 400:
             raise BadRequest(await resp.json())
+        elif resp.status == 404:
+            raise MaplistResNotFound("completion")
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
 
@@ -237,5 +239,7 @@ async def reject_run(who: discord.User, run_id: int) -> None:
     async with http.client.delete(f"{API_BASE_URL}/completions/{run_id}/bot", json=payload) as resp:
         if resp.status == 400:
             raise BadRequest(await resp.json())
+        elif resp.status == 404:
+            raise MaplistResNotFound("completion")
         if not resp.ok:
             raise ErrorStatusCode(resp.status)

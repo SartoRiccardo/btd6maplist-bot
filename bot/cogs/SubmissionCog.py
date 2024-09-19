@@ -72,18 +72,16 @@ async def ctxm_accept_submission(interaction: discord.Interaction, message: disc
         return
 
     await interaction.response.defer(ephemeral=True)
-    alr_accepted = True
     try:
         await accept_run(interaction.user, run_id)
-        alr_accepted = False
+        response = "✅ Submitted successfully!\n" \
+                   f"You can edit it [on the website]({WEB_BASE_URL}/completions/{run_id}) if needed."
     except BadRequest:
-        pass
-    await interaction.edit_original_response(
-        content="That run was already accepted!"
-                if alr_accepted else
-                "✅ Submitted successfully!\n"
-                f"You can edit it [on the website]({WEB_BASE_URL}/completions/{run_id}) if needed.",
-    )
+        response = "That run was already accepted!"
+    except MaplistResNotFound:
+        response = "Couldn't find that completion!\n" \
+                   "-# Maybe it was rejected?"
+    await interaction.edit_original_response(content=response)
 
 
 @discord.app_commands.context_menu(name="Reject Completion")
@@ -94,19 +92,17 @@ async def ctxm_reject_submission(interaction: discord.Interaction, message: disc
         return
 
     await interaction.response.defer(ephemeral=True)
-    alr_accepted = True
     try:
         await reject_run(interaction.user, run_id)
-        alr_accepted = False
+        response = "✅ Deleted successfully!\n" \
+                   f"If this was a mistake, you can insert it manually on the website, on the map's page."
     except BadRequest:
-        pass
-    await interaction.edit_original_response(
-        content="That run was already accepted!\n"
-                "-# If you wanted to delete it, do so on the website."
-                if alr_accepted else
-                "✅ Deleted successfully!\n"
-                f"If this was a mistake, you can insert it manually on the website, on the map's page.",
-    )
+        response = "That run was already accepted!\n" \
+                   "-# If you wanted to delete it, do so on the website."
+    except MaplistResNotFound:
+        response = "Couldn't find that completion!\n" \
+                   "-# Maybe it was rejected?"
+    await interaction.edit_original_response(content=response)
 
 
 ctxm_accept_submission.error(handle_error)
