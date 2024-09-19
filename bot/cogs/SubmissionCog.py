@@ -8,9 +8,8 @@ from bot.utils.requests.maplist import submit_map, get_maplist_user, submit_run,
 from bot.views import VRulesAccept
 from bot.views.modals import MapSubmissionModal, RunSubmissionModal
 from bot.types import MapPlacement
-from bot.exceptions import BadRequest, MaplistResNotFound
+from bot.exceptions import BadRequest, MaplistResNotFound, ErrorStatusCode
 from config import MAPLIST_GID, WH_RUN_SUBMISSION_IDS, MAPLIST_ROLES, WEB_BASE_URL
-from functools import wraps
 
 
 list_rules_url = "https://discord.com/channels/1162188507800944761/1162193272320569485/1272011602228678747"
@@ -81,6 +80,10 @@ async def ctxm_accept_submission(interaction: discord.Interaction, message: disc
     except MaplistResNotFound:
         response = "Couldn't find that completion!\n" \
                    "-# Maybe it was rejected?"
+    except ErrorStatusCode as exc:
+        if exc.status_code != 401:
+            raise exc
+        response = "Can't accept your own submission!"
     await interaction.edit_original_response(content=response)
 
 
