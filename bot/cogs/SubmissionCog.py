@@ -135,6 +135,22 @@ class SubmissionCog(CogBase):
         self.bot.tree.remove_command(ctxm_accept_submission.name)
         self.bot.tree.remove_command(ctxm_reject_submission.name)
 
+    @staticmethod
+    async def check_submission_proof(interaction: discord.Interaction, proof: discord.Attachment) -> bool:
+        if proof.size > 1024**2 * 3:
+            await interaction.response.send_message(
+                content=f"❌ Image size must be up to 3MB",
+                ephemeral=True,
+            )
+            return False
+        if proof.content_type.split("/")[-1].lower() not in ["webp", "png", "jpeg", "jpg"]:
+            await interaction.response.send_message(
+                content=f"❌ Admissible image formats: `webp`, `png`, `jpg`",
+                ephemeral=True,
+            )
+            return False
+        return True
+
     @submit.command(
         name="map",
         description="Submit a map to the Maplist",
@@ -155,16 +171,9 @@ class SubmissionCog(CogBase):
             proposed: MapPlacement,
             proof: discord.Attachment,
     ):
-        if proof.size > 1024**2 * 3:
-            return await interaction.response.send_message(
-                content=f"❌ Image size must be up to 2MB",
-                ephemeral=True,
-            )
-        if proof.content_type.split("/")[-1].lower() not in ["webp", "png", "jpeg", "jpg"]:
-            return await interaction.response.send_message(
-                content=f"❌ Admissible image formats: `webp`, `png`, `jpg`",
-                ephemeral=True,
-            )
+        check = await self.check_submission_proof(interaction, proof)
+        if not check:
+            return
 
         def process_callback(interaction: discord.Interaction, notes: str):
             return self.process_map_subm(
@@ -302,16 +311,9 @@ class SubmissionCog(CogBase):
             black_border: bool = False,
             lcc: bool = False,
     ):
-        if proof.size > 1024**2 * 3:
-            return await interaction.response.send_message(
-                content=f"❌ Image size must be up to 2MB",
-                ephemeral=True,
-            )
-        if proof.content_type.split("/")[-1].lower() not in ["webp", "png", "jpeg", "jpg"]:
-            return await interaction.response.send_message(
-                content=f"❌ Admissible image formats: `webp`, `png`, `jpg`",
-                ephemeral=True,
-            )
+        check = await self.check_submission_proof(interaction, proof)
+        if not check:
+            return
 
         async def process_callback(
                 interaction: discord.Interaction,
