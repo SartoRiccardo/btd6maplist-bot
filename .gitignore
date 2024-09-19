@@ -11,6 +11,7 @@ config.py
 __pycache__
 .idea
 venv
+.venv
 tmp
 
 # Other

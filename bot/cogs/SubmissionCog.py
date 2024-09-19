@@ -1,16 +1,16 @@
-import asyncio
 import re
 import discord
 from discord.ext import commands
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
 from bot.utils.handlers import handle_error
-from bot.utils.requests.maplist import submit_map, get_maplist_user, submit_run, get_maplist_map, accept_run
+from bot.utils.requests.maplist import submit_map, get_maplist_user, submit_run, get_maplist_map, accept_run, reject_run
 from bot.views import VRulesAccept
 from bot.views.modals import MapSubmissionModal, RunSubmissionModal
 from bot.types import MapPlacement
 from bot.exceptions import BadRequest, MaplistResNotFound
 from config import MAPLIST_GID, WH_RUN_SUBMISSION_IDS, MAPLIST_ROLES, WEB_BASE_URL
+from functools import wraps
 
 
 list_rules_url = "https://discord.com/channels/1162188507800944761/1162193272320569485/1272011602228678747"
@@ -27,9 +27,7 @@ class SubmitGroup(discord.app_commands.Group):
     pass
 
 
-@discord.app_commands.context_menu(name="Accept Completion")
-@discord.app_commands.guilds(MAPLIST_GID)
-async def ctxm_accept_submission(interaction: discord.Interaction, message: discord.Message):
+async def check_submission(interaction: discord.Interaction, message: discord.Message) -> int | None:
     if message.webhook_id is None or \
             not len(message.embeds) or \
             message.embeds[0].footer.text is None or \
@@ -63,6 +61,16 @@ async def ctxm_accept_submission(interaction: discord.Interaction, message: disc
             ephemeral=True,
         )
 
+    return run_id
+
+
+@discord.app_commands.context_menu(name="Accept Completion")
+@discord.app_commands.guilds(MAPLIST_GID)
+async def ctxm_accept_submission(interaction: discord.Interaction, message: discord.Message):
+    run_id = await check_submission(interaction, message)
+    if not isinstance(run_id, int):
+        return
+
     await interaction.response.defer(ephemeral=True)
     alr_accepted = True
     try:
@@ -78,7 +86,31 @@ async def ctxm_accept_submission(interaction: discord.Interaction, message: disc
     )
 
 
+@discord.app_commands.context_menu(name="Reject Completion")
+@discord.app_commands.guilds(MAPLIST_GID)
+async def ctxm_reject_submission(interaction: discord.Interaction, message: discord.Message):
+    run_id = await check_submission(interaction, message)
+    if not isinstance(run_id, int):
+        return
+
+    await interaction.response.defer(ephemeral=True)
+    alr_accepted = True
+    try:
+        await reject_run(interaction.user, run_id)
+        alr_accepted = False
+    except BadRequest:
+        pass
+    await interaction.edit_original_response(
+        content="That run was already accepted!\n"
+                "-# If you wanted to delete it, do so on the website."
+                if alr_accepted else
+                "✅ Deleted successfully!\n"
+                f"If this was a mistake, you can insert it manually on the website, on the map's page.",
+    )
+
+
 ctxm_accept_submission.error(handle_error)
+ctxm_reject_submission.error(handle_error)
 
 
 class SubmissionCog(CogBase):
@@ -100,10 +132,12 @@ class SubmissionCog(CogBase):
     def __init__(self, bot: commands.Bot):
         super().__init__(bot)
         self.bot.tree.add_command(ctxm_accept_submission)
+        self.bot.tree.add_command(ctxm_reject_submission)
 
     async def cog_unload(self) -> None:
         await super().cog_load()
         self.bot.tree.remove_command(ctxm_accept_submission.name)
+        self.bot.tree.remove_command(ctxm_reject_submission.name)
 
     @submit.command(
         name="map",
