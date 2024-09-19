@@ -210,6 +210,13 @@ class SubmissionCog(CogBase):
             notes: str,
             proposed: MapPlacement,
     ):
+        for rl in interaction.user.roles:
+            if rl.id in MAPLIST_ROLES["banned"]:
+                return await interaction.response.send_message(
+                    content="You are banned from submitting...",
+                    ephemeral=True,
+                )
+
         proposed_idxs = {
             "list": [
                 "Maplist / Top 3",
@@ -368,6 +375,13 @@ class SubmissionCog(CogBase):
             vproof_url: str | None,
             leftover: int | None,
     ):
+        for rl in interaction.user.roles:
+            if rl.id in MAPLIST_ROLES["banned"]:
+                return await interaction.response.send_message(
+                    content="You are banned from submitting...",
+                    ephemeral=True,
+                )
+
         await interaction.response.defer(thinking=True, ephemeral=True)
 
         map_id = map_id.upper()
