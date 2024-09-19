@@ -153,7 +153,7 @@ class SubmissionCog(CogBase):
 
     @submit.command(
         name="map",
-        description="Submit a map to the Maplist",
+        description="Submit a map to the Maplist.",
     )
     @discord.app_commands.rename(
         map_code="code",
@@ -253,10 +253,10 @@ class SubmissionCog(CogBase):
 
     @submit.command(
         name="run",
-        description="Submit a run on a map",
+        description="Submit a run on a map. If necessary, the command will ask you for video proof later!",
     )
     @discord.app_commands.describe(
-        proof="Image proof of you beating CHIMPS on the map (max 2MB)"
+        proof="Image proof of you beating CHIMPS on the map (max 3MB)"
     )
     @autodoc
     async def cmd_submit_run(
