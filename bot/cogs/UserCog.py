@@ -146,6 +146,7 @@ class UserCog(CogBase):
                 content="Your OAK is not well formatted! it should be `oak_` followed by some numbers and/or lowercase "
                         "letters!\n\n"
                         "*Don't know what an OAK is? Leave the field blank to get a help message!*",
+                ephemeral=True,
             )
 
         await interaction.response.defer(ephemeral=True)
