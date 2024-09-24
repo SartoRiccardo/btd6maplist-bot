@@ -38,6 +38,16 @@ async def get_maplist_map(map_id: str) -> dict:
         return await resp.json()
 
 
+async def get_experts() -> list:
+    async with http.client.get(f"{API_BASE_URL}/exmaps") as resp:
+        return await resp.json()
+
+
+async def get_maplist() -> list:
+    async with http.client.get(f"{API_BASE_URL}/maps") as resp:
+        return await resp.json()
+
+
 async def get_maplist_config() -> dict:
     async with http.client.get(f"{API_BASE_URL}/config") as resp:
         if not resp.ok:

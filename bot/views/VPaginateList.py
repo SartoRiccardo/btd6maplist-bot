@@ -1,6 +1,6 @@
 import discord
 from .components import OwnerButton
-from bot.types import RequestPagesCb, LbBuilderCb
+from bot.types import RequestPagesCb, PageContentBuilderCb
 from bot.utils.formulas import get_page_idxs
 
 
@@ -11,13 +11,23 @@ class VPaginateList(discord.ui.View):
             interaction: discord.Interaction,
             total_pages: int,
             current_page: int,
-            pages_saved: dict[int, dict],
+            pages_saved: dict[int, dict | list],
             items_page: int,
             items_page_srv: int,
-            request_cb: RequestPagesCb,
-            message_build_cb: LbBuilderCb,
+            request_cb: RequestPagesCb | None,
+            message_build_cb: PageContentBuilderCb,
             timeout: float = None,
     ):
+        """
+        :param interaction: Original interaction to edit
+        :param total_pages: Total number of pages (Discord)
+        :param current_page: Page the user is on
+        :param pages_saved: Number of page and contents of the page (API)
+        :param items_page: Items per page (Discord)
+        :param items_page_srv: Items per page (API)
+        :param request_cb: Awaitable that updates pages_saved, is called if more pages are needed.
+        :param message_build_cb: Callback that returns a string that will be outputted
+        """
         super().__init__(timeout=timeout)
         self.og_interaction = interaction
         self.total_pages = total_pages
@@ -71,16 +81,21 @@ class VPaginateList(discord.ui.View):
             pg for pg in range(req_page_start, req_page_end + 1)
             if pg not in self.pages_saved
         ]
-        lb_pages = await self.request_cb(
-            [pg for pg in idx_to_request]
-        )
-        lb_pages = {
-            **self.pages_saved,
-            **lb_pages,
-        }
 
+        lb_pages = self.pages_saved
+        if self.request_cb:
+            lb_pages = await self.request_cb(
+                [pg for pg in idx_to_request]
+            )
+            lb_pages = {
+                **self.pages_saved,
+                **lb_pages,
+            }
+
+        content = self.message_build_cb(page, lb_pages)
         await self.og_interaction.edit_original_response(
-            content=self.message_build_cb(page, lb_pages),
+            content=content if isinstance(content, str) else None,
+            embed=content if isinstance(content, discord.Embed) else None,
             view=VPaginateList(
                 self.og_interaction,
                 self.total_pages,

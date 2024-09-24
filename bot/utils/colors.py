@@ -1,4 +1,9 @@
 
+class EmbedColor:
+    experts = 0x5e35b1
+    maplist = 0x00897b
+
+
 class Color:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
