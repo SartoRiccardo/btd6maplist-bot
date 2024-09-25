@@ -220,7 +220,7 @@ class MapInfoCog(CogBase):
                 EmjMedals.win, "Completions",
                 MapInfoCog.get_completions_message(
                     interaction,
-                    map_data["code"],
+                    map_data,
                     VPages(interaction, pages, current_page=len(select_pages)),
                 )
             )
@@ -352,7 +352,7 @@ class MapInfoCog(CogBase):
     @staticmethod
     def get_completions_message(
             interaction: discord.Interaction,
-            map_code: str,
+            map_data: dict,
             pages_view: VPages,
     ) -> MessageContent:
         items_page = 20
@@ -361,13 +361,31 @@ class MapInfoCog(CogBase):
 
         async def request_completions(pages: list[int]):
             lb_data = await asyncio.gather(*[
-                get_map_completions(map_code, pg)
+                get_map_completions(map_data["code"], pg)
                 for pg in pages
             ])
             return {pg: lb_data[i] for i, pg in enumerate(pages)}
 
         def build_message(entries: list[dict]) -> str:
-            return "`[501]`"
+            row_template = "`{: <20}`  |  {}\n"
+            medals_template = "{}  ~  {}"
+            content = "User                                         |  Format ~ Medals\n" \
+                      "—————————————  +  —————————\n"
+            for entry in entries:
+                for i, ply in enumerate(entry["users"]):
+                    comp_format_emj = EmjIcons.format(entry["format"])
+                    comp_medals = [EmjMedals.bb if entry["black_border"] else EmjMedals.win]
+                    if entry["format"] <= 50 and entry["no_geraldo"]:
+                        comp_medals.append(EmjMedals.no_opt_hero)
+                    if entry["current_lcc"]:
+                        comp_medals.append(EmjMedals.lcc)
+                    comp_info = "↓     ↓     ↓     ↓" if i < len(entry["users"])-1 else \
+                        medals_template.format(comp_format_emj, " ".join(comp_medals))
+                    uname = ply["name"]
+                    if len(uname) > 20:
+                        uname = f"{uname[:20]}+"
+                    content += row_template.format(uname, comp_info)
+            return content.strip()
 
         async def load_message() -> MessageContent:
             pages_to_req = [pg for pg in range(req_page_start, req_page_end+1)]
