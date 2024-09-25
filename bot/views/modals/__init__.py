@@ -1,3 +1,3 @@
-from .MapSubmissionModal import MapSubmissionModal
-from .RunSubmissionModal import RunSubmissionModal
-from .ModalSelectPage import MSelectPage
+from .MMapSubmission import MMapSubmission
+from .MRunSubmission import MRunSubmission
+from .MSelectPage import MSelectPage

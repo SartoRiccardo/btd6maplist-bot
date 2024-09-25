@@ -6,7 +6,7 @@ from bot.utils.emojis import EmjMisc
 from .ModalBase import ModalBase
 
 
-class RunSubmissionModal(ModalBase, title="Submit a Completion"):
+class MRunSubmission(ModalBase, title="Submit a Completion"):
     def __init__(
             self,
             submit_cb: SubmitRunModalCb,
@@ -62,7 +62,7 @@ class RunSubmissionModal(ModalBase, title="Submit a Completion"):
         if err := self.validate_fields():
             try_again_view = bot.views.VTryAgain(
                 interaction,
-                RunSubmissionModal(
+                MRunSubmission(
                     self.submit_cb, self.is_lcc, self.req_video,
                     init_values={
                         "notes": self.notes.value,

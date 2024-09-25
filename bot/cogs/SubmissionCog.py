@@ -6,7 +6,7 @@ from bot.utils.decos import autodoc
 from bot.utils.handlers import handle_error
 from bot.utils.requests.maplist import submit_map, get_maplist_user, submit_run, get_maplist_map, accept_run, reject_run
 from bot.views import VRulesAccept
-from bot.views.modals import MapSubmissionModal, RunSubmissionModal
+from bot.views.modals import MMapSubmission, MRunSubmission
 from bot.types import MapPlacement
 from bot.exceptions import BadRequest, MaplistResNotFound, ErrorStatusCode
 from config import MAPLIST_GID, WH_RUN_SUBMISSION_IDS, MAPLIST_ROLES, WEB_BASE_URL
@@ -187,7 +187,7 @@ class SubmissionCog(CogBase):
                 proposed
             )
 
-        modal = MapSubmissionModal(process_callback)
+        modal = MMapSubmission(process_callback)
 
         # Note: this is an API call to the backend, it can only stay
         # within the 3-second Discord threshold because it's local, otherwise
@@ -343,7 +343,7 @@ class SubmissionCog(CogBase):
                 leftover,
             )
 
-        modal = RunSubmissionModal(
+        modal = MRunSubmission(
             process_callback,
             is_lcc=lcc,
             req_video=lcc or no_optimal_hero or black_border,
