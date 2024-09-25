@@ -367,6 +367,10 @@ class MapInfoCog(CogBase):
             return {pg: lb_data[i] for i, pg in enumerate(pages)}
 
         def build_message(entries: list[dict]) -> str:
+            if len(entries) == 0:
+                return f"## {map_data['name']} — Completions\n\n" \
+                       f"-# Not much going on here... you could LCC this map by default!"
+
             row_template = "`{: <20}`  |  {}\n"
             medals_template = "{}  ~  {}"
             content = f"## {map_data['name']} — Completions\n" \
