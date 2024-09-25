@@ -369,7 +369,8 @@ class MapInfoCog(CogBase):
         def build_message(entries: list[dict]) -> str:
             row_template = "`{: <20}`  |  {}\n"
             medals_template = "{}  ~  {}"
-            content = "User                                         |  Format ~ Medals\n" \
+            content = f"## {map_data['name']} — Completions\n" \
+                      "User                                         |  Format ~ Medals\n" \
                       "—————————————  +  —————————\n"
             for entry in entries:
                 for i, ply in enumerate(entry["users"]):
