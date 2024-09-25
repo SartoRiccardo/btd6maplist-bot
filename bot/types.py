@@ -1,6 +1,6 @@
 import discord
 from bot.utils.models import MessageContent
-from typing import Literal, Callable, Awaitable
+from typing import Literal, Callable, Awaitable, Any
 
 
 Format = Literal["Current Version"]
@@ -26,6 +26,6 @@ MapPlacement = Literal[
 EmbedPage = tuple[str, str, MessageContent]
 
 RequestPagesCb = Callable[[list[int]], Awaitable[dict[int, dict]]]
-PageContentBuilderCb = Callable[[int, dict[int, dict]], str | discord.Embed]
+PageContentBuilderCb = Callable[[list[Any]], str | discord.Embed]
 SubmitMapModalCb = Callable[[discord.Interaction, str | None], Awaitable[None]]
 SubmitRunModalCb = Callable[[discord.Interaction, str | None, str | None, int | None], Awaitable[None]]

@@ -48,6 +48,12 @@ async def get_maplist() -> list:
         return await resp.json()
 
 
+async def get_map_completions(map_code: str, page: int) -> list:
+    qparams = {page: page}
+    async with http.client.get(f"{API_BASE_URL}/maps/{map_code}/completions?{urllib.parse.urlencode(qparams)}") as resp:
+        return await resp.json()
+
+
 async def get_maplist_config() -> dict:
     async with http.client.get(f"{API_BASE_URL}/config") as resp:
         if not resp.ok:

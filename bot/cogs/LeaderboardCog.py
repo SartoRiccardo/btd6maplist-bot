@@ -67,18 +67,20 @@ class LeaderboardCog(CogBase):
             )
 
         client_pages = math.ceil(lb_pages[req_page_start]["total"] / items_page)
+        view = VPaginateList(
+            interaction,
+            client_pages,
+            page,
+            lb_pages,
+            items_page,
+            items_page_srv,
+            lambda pages: self.request_pages(lb_type, game_format, pages),
+            self.create_lb_message,
+            list_key="entries",
+        )
         await interaction.edit_original_response(
-            content=self.create_lb_message(page, lb_pages),
-            view=VPaginateList(
-                interaction,
-                client_pages,
-                page,
-                lb_pages,
-                items_page,
-                items_page_srv,
-                lambda pages: self.request_pages(lb_type, game_format, pages),
-                self.create_lb_message,
-            ),
+            content=self.create_lb_message(view.get_needed_rows(page, lb_pages)),
+            view=view,
         )
 
     @staticmethod
@@ -94,29 +96,18 @@ class LeaderboardCog(CogBase):
         return {pg: lb_data[i] for i, pg in enumerate(pages)}
 
     @staticmethod
-    def create_lb_message(
-            page: int,
-            lb_pages: dict[int, dict],
-    ) -> str:
+    def create_lb_message(entries: list[dict]) -> str:
         rows = [
             "User                                                   |    Points",
             "———————————————-   +   —————",
         ]
-        start_idx, end_idx, req_page_start, req_page_end = get_page_idxs(page, items_page, items_page_srv)
-        for srv_page_idx in range(req_page_start, req_page_end+1):
-            srv_page = lb_pages[srv_page_idx]
-
-            entry_sidx = start_idx % items_page_srv
-            count = min(len(srv_page["entries"]), entry_sidx + end_idx-start_idx + 1)
-            for i in range(entry_sidx, count):
-                entry = srv_page["entries"][i]
-                plcmt = placements_emojis.get(entry["position"], f"`{entry['position']: >3}`")
-                rows.append(row_template.format(
-                    emoji=plcmt,
-                    name=entry["user"]["name"],
-                    score=entry["score"] if not entry["score"].is_integer else int(entry["score"]),
-                ))
-            start_idx += count - entry_sidx
+        for entry in entries:
+            plcmt = placements_emojis.get(entry["position"], f"`{entry['position']: >3}`")
+            rows.append(row_template.format(
+                emoji=plcmt,
+                name=entry["user"]["name"],
+                score=entry["score"] if not entry["score"].is_integer else int(entry["score"]),
+            ))
 
         return "\n".join(rows)
 

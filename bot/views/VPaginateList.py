@@ -3,6 +3,8 @@ from .components import OwnerButton
 from .modals import MSelectPage
 from bot.types import RequestPagesCb, PageContentBuilderCb
 from bot.utils.formulas import get_page_idxs
+from bot.utils.discord import composite_views
+from typing import Any
 
 
 class VPaginateList(discord.ui.View):
@@ -17,6 +19,8 @@ class VPaginateList(discord.ui.View):
             items_page_srv: int,
             request_cb: RequestPagesCb | None,
             message_build_cb: PageContentBuilderCb,
+            additional_views: list[discord.ui.View] | None = None,
+            list_key: str = "entries",
             timeout: float = None,
     ):
         """
@@ -28,6 +32,7 @@ class VPaginateList(discord.ui.View):
         :param items_page_srv: Items per page (API)
         :param request_cb: Awaitable that updates pages_saved, is called if more pages are needed.
         :param message_build_cb: Callback that returns a string that will be outputted
+        :param list_key: Key to access the list in the payload.
         """
         super().__init__(timeout=timeout)
         self.og_interaction = interaction
@@ -39,6 +44,9 @@ class VPaginateList(discord.ui.View):
         self.items_page_srv = items_page_srv
         self.request_cb = request_cb
         self.message_build_cb = message_build_cb
+
+        self.list_key = list_key
+        self.additional_views = additional_views
 
         self.add_item(OwnerButton(
             self.og_interaction.user,
@@ -77,6 +85,20 @@ class VPaginateList(discord.ui.View):
             disabled=self.current_page >= self.total_pages,
         ))
 
+    def get_needed_rows(self, page: int, saved_pages: dict[int, dict | list]) -> list[Any]:
+        needed = []
+        start_idx, end_idx, req_page_start, req_page_end = get_page_idxs(page, self.items_page, self.items_page_srv)
+        for srv_page_idx in range(req_page_start, req_page_end + 1):
+            srv_page = saved_pages[srv_page_idx]
+
+            entry_sidx = start_idx % self.items_page_srv
+            count = min(len(srv_page[self.list_key]), entry_sidx + end_idx - start_idx + 1)
+            for i in range(entry_sidx, count):
+                needed.append(srv_page[self.list_key][i])
+            start_idx += count - entry_sidx
+
+        return needed
+
     async def go_to_page(self, page: int) -> None:
         _si, _ei, req_page_start, req_page_end = get_page_idxs(page, self.items_page, self.items_page_srv)
         idx_to_request = [
@@ -84,31 +106,40 @@ class VPaginateList(discord.ui.View):
             if pg not in self.pages_saved
         ]
 
-        lb_pages = self.pages_saved
+        saved_pages = self.pages_saved
         if self.request_cb:
-            lb_pages = await self.request_cb(
+            saved_pages = await self.request_cb(
                 [pg for pg in idx_to_request]
             )
-            lb_pages = {
+            saved_pages = {
                 **self.pages_saved,
-                **lb_pages,
+                **saved_pages,
             }
 
-        content = self.message_build_cb(page, lb_pages)
-        await self.og_interaction.edit_original_response(
-            content=content if isinstance(content, str) else None,
-            embed=content if isinstance(content, discord.Embed) else None,
-            view=VPaginateList(
+        entries = self.get_needed_rows(page, saved_pages)
+        content = self.message_build_cb(entries)
+        views = [
+            VPaginateList(
                 self.og_interaction,
                 self.total_pages,
                 page,
-                lb_pages,
+                saved_pages,
                 self.items_page,
                 self.items_page_srv,
                 self.request_cb,
                 self.message_build_cb,
+                additional_views=self.additional_views,
                 timeout=self.timeout,
-            ),
+                list_key=self.list_key,
+            )
+        ]
+        if self.additional_views:
+            views += self.additional_views
+
+        await self.og_interaction.edit_original_response(
+            content=content if isinstance(content, str) else None,
+            embed=content if isinstance(content, discord.Embed) else None,
+            view=composite_views(*views),
         )
 
     async def modal_select_page(self, interaction: discord.Interaction):

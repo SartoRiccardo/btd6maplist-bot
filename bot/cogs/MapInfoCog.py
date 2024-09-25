@@ -4,19 +4,21 @@ import math
 from discord.ext import commands
 from bot.utils.requests.maplist import (
     get_maplist_map,
+    get_map_completions,
     get_maplist_config,
     get_experts,
     get_maplist,
 )
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
-from bot.utils.models import MessageContent
+from bot.utils.models import MessageContent, LazyMessageContent
 from bot.views import VPages, VPaginateList
 from config import WEB_BASE_URL, EMBED_CLR, NK_PREVIEW_PROXY
 from bot.types import EmbedPage, ExpertDifficulty
 from bot.utils.emojis import EmjHeros, EmjIcons, EmjMisc, EmjMedals
 from bot.utils.formulas import points
 from bot.utils.colors import EmbedColor
+from bot.utils.formulas import get_page_idxs
 
 
 class MapInfoCog(CogBase):
@@ -199,11 +201,30 @@ class MapInfoCog(CogBase):
             if lcc["lcc"]["leftover"] > max_lcc["lcc"]["leftover"]:
                 max_lcc = lcc
 
-        pages = [
+        pages = []
+        select_pages = [
+            ("🗺️", "Map Overview"),
+            (EmjMedals.lcc, "Least Cash CHIMPS"),
+            ("🎯", "Round 6 Start"),
+        ]
+        page_contents = [
             MapInfoCog.get_map_message(map_data, ml_config),
             MapInfoCog.get_lcc_message(map_data, max_lcc),
             MapInfoCog.get_r6start_message(map_data),
         ]
+        for i in range(len(select_pages)):
+            pages.append((*select_pages[i], page_contents[i]))
+
+        pages.append(
+            (
+                EmjMedals.win, "Completions",
+                MapInfoCog.get_completions_message(
+                    interaction,
+                    map_data["code"],
+                    VPages(interaction, pages, current_page=len(select_pages)),
+                )
+            )
+        )
 
         content = await pages[idx][2].content()
         embeds = await pages[idx][2].embeds()
@@ -217,7 +238,7 @@ class MapInfoCog(CogBase):
     def get_map_message(
             map_data: dict,
             ml_config: dict
-    ) -> EmbedPage:
+    ) -> MessageContent:
         description = ""
         if len(map_data["aliases"]):
             description += f"-# Aliases: {' - '.join(map_data['aliases'])}\n"
@@ -269,17 +290,15 @@ class MapInfoCog(CogBase):
                 ),
                 inline=True,
             )
-        return "🗺️", "Map Overview", MessageContent(embeds=[embed])
+        return MessageContent(embeds=[embed])
 
     @staticmethod
     def get_lcc_message(
             map_data: dict,
             lcc_data: dict | None,
-    ) -> EmbedPage:
-        emj = "<:m_lcc:1284093037391253526>"
-        label = "Least Cash CHIMPS"
+    ) -> MessageContent:
         if lcc_data is None:
-            return emj, label, MessageContent(content="-# No LCCs for this map!")
+            return MessageContent(content="-# No LCCs for this map!")
 
         is_proof_image = lcc_data["lcc"]["proof"] and \
             any([
@@ -317,20 +336,62 @@ class MapInfoCog(CogBase):
             value=ply_list,
         )
 
-        return emj, label, MessageContent(embeds=[embed])
+        return MessageContent(embeds=[embed])
 
     @staticmethod
     def get_r6start_message(
             map_data: dict,
-    ) -> EmbedPage:
-        emj = "🎯"
-        label = "Round 6 Start"
+    ) -> MessageContent:
         if map_data["r6_start"] is None:
-            return emj, label, MessageContent(content="-# No R6 Start info for this map!")
+            return MessageContent(content="-# No R6 Start info for this map!")
 
         content = f"Round 6 Start for [{map_data['name']}]({WEB_BASE_URL}/map/{map_data['code']}):\n" + \
                   map_data["r6_start"]
-        return emj, label, MessageContent(content=content)
+        return MessageContent(content=content)
+
+    @staticmethod
+    def get_completions_message(
+            interaction: discord.Interaction,
+            map_code: str,
+            pages_view: VPages,
+    ) -> MessageContent:
+        items_page = 20
+        items_page_srv = 50
+        _si, _ei, req_page_start, req_page_end = get_page_idxs(1, items_page, items_page_srv)
+
+        async def request_completions(pages: list[int]):
+            lb_data = await asyncio.gather(*[
+                get_map_completions(map_code, pg)
+                for pg in pages
+            ])
+            return {pg: lb_data[i] for i, pg in enumerate(pages)}
+
+        def build_message(entries: list[dict]) -> str:
+            return "`[501]`"
+
+        async def load_message() -> MessageContent:
+            pages_to_req = [pg for pg in range(req_page_start, req_page_end+1)]
+            comp_pages = await request_completions(pages_to_req)
+
+            client_pages = math.ceil(comp_pages[req_page_start]["total"] / items_page)
+            view = VPaginateList(
+                interaction,
+                client_pages,
+                1,
+                comp_pages,
+                items_page,
+                items_page_srv,
+                request_completions,
+                build_message,
+                additional_views=[pages_view],
+                list_key="completions",
+            )
+            return MessageContent(
+                content=build_message(view.get_needed_rows(1, comp_pages)),
+                view=view,
+            )
+
+        return LazyMessageContent(load_message)
 
 
 async def setup(bot: commands.Bot) -> None:
