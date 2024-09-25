@@ -1,5 +1,6 @@
 import discord
 from .components import OwnerButton
+from .modals import MSelectPage
 from bot.types import RequestPagesCb, PageContentBuilderCb
 from bot.utils.formulas import get_page_idxs
 
@@ -54,10 +55,11 @@ class VPaginateList(discord.ui.View):
             disabled=self.current_page <= 1,
         ))
 
-        self.add_item(discord.ui.Button(
+        self.add_item(OwnerButton(
+            self.og_interaction.user,
+            self.modal_select_page,
             style=discord.ButtonStyle.gray,
             label=f"{min(self.current_page, self.total_pages)} / {self.total_pages}",
-            disabled=True,
         ))
 
         self.add_item(OwnerButton(
@@ -107,6 +109,11 @@ class VPaginateList(discord.ui.View):
                 self.message_build_cb,
                 timeout=self.timeout,
             ),
+        )
+
+    async def modal_select_page(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(
+            MSelectPage(self.total_pages, self.go_to_page)
         )
 
     async def ff_back(self, interaction: discord.Interaction) -> None:
