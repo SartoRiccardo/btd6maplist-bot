@@ -92,8 +92,9 @@ async def get_maplist_user(uid: int, no_load_oak: bool = False) -> dict:
         return await resp.json()
 
 
-async def get_user_completions(uid: int) -> dict:
-    async with http.client.get(f"{API_BASE_URL}/users/{uid}/completions") as resp:
+async def get_user_completions(uid: int, page: int = 1) -> dict:
+    qparams = {page: page}
+    async with http.client.get(f"{API_BASE_URL}/users/{uid}/completions?{urllib.parse.urlencode(qparams)}") as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
         return await resp.json()

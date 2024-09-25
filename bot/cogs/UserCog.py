@@ -1,11 +1,15 @@
 import asyncio
+import math
 import re
 import discord
 from discord.ext import commands
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
+from bot.utils.formulas import get_page_idxs
 from bot.utils.requests.maplist import get_maplist_user, get_user_completions, set_oak
 from bot.utils.requests.ninjakiwi import get_btd6_user
+from bot.views import VPages, VPaginateList
+from bot.utils.models import MessageContent
 from bot.exceptions import MaplistResNotFound
 from config import EMBED_CLR, WEB_BASE_URL
 from bot.utils.emojis import EmjMedals, EmjIcons, EmjPlacements, EmjMisc
@@ -62,6 +66,7 @@ class UserCog(CogBase):
     ):
         await interaction.response.defer(ephemeral=hide)
 
+        compl = None
         try:
             profile, compl = await asyncio.gather(
                 get_maplist_user(user.id),
@@ -72,6 +77,95 @@ class UserCog(CogBase):
             comp_num = 0
             profile = empty_profile
 
+        pages = [
+            ("ℹ️", "User Overview", self.get_user_message(interaction, user, profile, comp_num)),
+        ]
+        if compl and comp_num > 0:
+            pages.append((
+                EmjMedals.win, "Completions",
+                self.get_completions_message(interaction, user, compl,
+                                             VPages(interaction, pages, placeholder="Other user info",
+                                                    current_page=len(pages))),
+            ))
+
+        pages_view = None
+        if len(pages) > 0:
+            pages_view = VPages(interaction, pages, placeholder="Other user info")
+
+        await interaction.edit_original_response(
+            embeds=await pages[0][2].embeds(),
+            view=pages_view,
+        )
+
+    @staticmethod
+    def get_completions_message(
+            interaction: discord.Interaction,
+            user: discord.User,
+            completions: dict,
+            pages_view: VPages,
+    ) -> MessageContent:
+        items_page = 20
+        items_page_srv = 50
+
+        async def request_completions(pages: list[int]):
+            lb_data = await asyncio.gather(*[
+                get_user_completions(user.id, pg)
+                for pg in pages
+            ])
+            return {pg: lb_data[i] for i, pg in enumerate(pages)}
+
+        def build_message(entries: list[dict]) -> str:
+            if len(entries) == 0:
+                return f"## {user.display_name} — Completions\n\n" \
+                       f"-# Not much going on here... go play the game!"
+
+            row_template = "{}  ~  {}  |  {}\n"
+            content = f"## {user.display_name} — Completions\n" \
+                      "Format ~ Medals   |  Map\n" \
+                      "—————————  + —————————\n"
+            medal_spots = 3
+            for i, entry in enumerate(entries):
+                format_emj = EmjIcons.format(entry["format"])
+                comp_medals = [EmjMedals.bb if entry["black_border"] else EmjMedals.win]
+                if entry["format"] <= 50 and entry["no_geraldo"]:
+                    comp_medals.append(EmjMedals.no_opt_hero)
+                if entry["current_lcc"]:
+                    comp_medals.append(EmjMedals.lcc)
+                for _ in range(len(comp_medals), medal_spots):
+                    comp_medals.insert(0, EmjMisc.blank)
+
+                map_name = entry["map"]["name"]
+                if i+1 < len(entries) and entry["map"]["code"] == entries[i+1]["map"]["code"]:
+                    map_name = "↓     ↓     ↓     ↓"
+                content += row_template.format(format_emj, " ".join(comp_medals), map_name)
+            return content.strip()
+
+        comp_pages = {1: completions}
+        client_pages = math.ceil(completions["total"] / items_page)
+        view = VPaginateList(
+            interaction,
+            client_pages,
+            1,
+            comp_pages,
+            items_page,
+            items_page_srv,
+            request_completions,
+            build_message,
+            additional_views=[pages_view],
+            list_key="completions",
+        )
+        return MessageContent(
+            content=build_message(view.get_needed_rows(1, comp_pages)),
+            view=view,
+        )
+
+    @staticmethod
+    def get_user_message(
+            interaction: discord.Interaction,
+            user: discord.User,
+            profile: dict,
+            comp_num: int,
+    ) -> MessageContent:
         description = ""
         if len(profile["created_maps"]):
             description += f"- **Created Maps:** {len(profile['created_maps'])}\n"
@@ -113,9 +207,7 @@ class UserCog(CogBase):
         if not something:
             embed.description = f"-# Not much going on here...\n\n\n\n{EmjMisc.blank}"
 
-        await interaction.edit_original_response(
-            embed=embed,
-        )
+        return MessageContent(embeds=[embed])
 
     @discord.app_commands.command(
         name="oak",
