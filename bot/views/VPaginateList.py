@@ -52,13 +52,14 @@ class VPaginateList(discord.ui.View):
         if total_pages == 1:
             return
 
-        self.add_item(OwnerButton(
-            self.og_interaction.user,
-            self.ff_back,
-            style=discord.ButtonStyle.blurple,
-            emoji="⏮️",
-            disabled=self.current_page <= 1,
-        ))
+        if total_pages > 2:
+            self.add_item(OwnerButton(
+                self.og_interaction.user,
+                self.ff_back,
+                style=discord.ButtonStyle.blurple,
+                emoji="⏮️",
+                disabled=self.current_page <= 1,
+            ))
         self.add_item(OwnerButton(
             self.og_interaction.user,
             self.page_back,
@@ -72,6 +73,7 @@ class VPaginateList(discord.ui.View):
             self.modal_select_page,
             style=discord.ButtonStyle.gray,
             label=f"{min(self.current_page, self.total_pages)} / {self.total_pages}",
+            disabled=total_pages <= 2,
         ))
 
         self.add_item(OwnerButton(
@@ -81,13 +83,14 @@ class VPaginateList(discord.ui.View):
             emoji="▶️",
             disabled=self.current_page >= self.total_pages,
         ))
-        self.add_item(OwnerButton(
-            self.og_interaction.user,
-            self.ff_next,
-            style=discord.ButtonStyle.blurple,
-            emoji="⏭️",
-            disabled=self.current_page >= self.total_pages,
-        ))
+        if total_pages > 2:
+            self.add_item(OwnerButton(
+                self.og_interaction.user,
+                self.ff_next,
+                style=discord.ButtonStyle.blurple,
+                emoji="⏭️",
+                disabled=self.current_page >= self.total_pages,
+            ))
 
     def get_needed_rows(self, page: int, saved_pages: dict[int, dict | list]) -> list[Any]:
         needed = []
