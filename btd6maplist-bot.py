@@ -6,7 +6,7 @@ from pathlib import Path
 import bot.utils.http
 from bot import __version__
 from discord.ext import commands
-from config import TOKEN, APP_ID, DATA_PATH
+from config import TOKEN, APP_ID, DATA_PATH, WEB_BASE_URL
 from bot.utils.colors import purple
 
 
@@ -19,7 +19,9 @@ class MaplistBot(commands.Bot):
             command_prefix=commands.when_mentioned_or(",,,"),
             intents=intents,
             application_id=APP_ID,
-            activity=discord.Game(name=f"/help"),
+            activity=discord.CustomActivity(
+                name=f"{WEB_BASE_URL.split('//', 1)[1]}",
+            ),
         )
         self.remove_command("help")
         self.version = __version__
