@@ -215,16 +215,23 @@ class MapInfoCog(CogBase):
         for i in range(len(select_pages)):
             pages.append((*select_pages[i], page_contents[i]))
 
+        views_to_load = []
+
+        comp_page_view = VPages(interaction, pages, current_page=len(select_pages), autoload=False)
         pages.append(
             (
                 EmjMedals.win, "Completions",
                 MapInfoCog.get_completions_message(
                     interaction,
                     map_data,
-                    VPages(interaction, pages, current_page=len(select_pages)),
+                    comp_page_view,
                 )
             )
         )
+        views_to_load.append(comp_page_view)
+
+        for view in views_to_load:
+            view.load_items()
 
         content = await pages[idx][2].content()
         embeds = await pages[idx][2].embeds()

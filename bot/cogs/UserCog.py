@@ -80,13 +80,19 @@ class UserCog(CogBase):
         pages = [
             ("ℹ️", "User Overview", self.get_user_message(interaction, user, profile, comp_num)),
         ]
+
+        views_to_load = []
         if compl and comp_num > 0:
+            views_to_load.append(
+                VPages(interaction, pages, placeholder="Other user info", current_page=len(pages), autoload=False)
+            )
             pages.append((
                 EmjMedals.win, "Completions",
-                self.get_completions_message(interaction, user, compl,
-                                             VPages(interaction, pages, placeholder="Other user info",
-                                                    current_page=len(pages))),
+                self.get_completions_message(interaction, user, compl, views_to_load[-1]),
             ))
+
+        for view in views_to_load:
+            view.load_items()
 
         pages_view = None
         if len(pages) > 0:

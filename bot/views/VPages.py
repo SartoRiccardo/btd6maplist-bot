@@ -13,18 +13,24 @@ class VPages(discord.ui.View):
             current_page: int = 0,
             placeholder: str = "Other map info",
             timeout: float = None,
+            autoload: bool = True,
     ):
         super().__init__(timeout=timeout)
         self.og_interaction = interaction
         self.pages = pages
         self.current_page = current_page
+        self.placeholder = placeholder
 
+        if autoload:
+            self.load_items()
+
+    def load_items(self):
         self.add_item(PageSelector(
             self.pages,
             self.current_page,
             self.on_page_select,
-            placeholder=placeholder,
-            owner=interaction.user,
+            placeholder=self.placeholder,
+            owner=self.og_interaction.user,
         ))
 
     async def on_page_select(
