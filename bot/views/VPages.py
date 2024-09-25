@@ -32,9 +32,11 @@ class VPages(discord.ui.View):
         new_page = self.pages[page_idx]
         await interaction.response.defer(thinking=False)
 
+        content = await new_page[2].content()
+        embeds = await new_page[2].embeds()
         await self.og_interaction.edit_original_response(
-            content=new_page[2],
-            embeds=new_page[3] if new_page[3] is not None else [],
+            content=content,
+            embeds=embeds if embeds else [],
             view=VPages(
                 self.og_interaction,
                 self.pages,

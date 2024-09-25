@@ -10,6 +10,7 @@ from bot.utils.requests.maplist import (
 )
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
+from bot.utils.models import MessageContent
 from bot.views import VPages, VPaginateList
 from config import WEB_BASE_URL, EMBED_CLR, NK_PREVIEW_PROXY
 from bot.types import EmbedPage, ExpertDifficulty
@@ -204,9 +205,11 @@ class MapInfoCog(CogBase):
             MapInfoCog.get_r6start_message(map_data),
         ]
 
+        content = await pages[idx][2].content()
+        embeds = await pages[idx][2].embeds()
         await interaction.edit_original_response(
-            content=pages[idx][2],
-            embeds=pages[idx][3] if pages[idx][3] else [],
+            content=content,
+            embeds=embeds if embeds else [],
             view=VPages(interaction, pages),
         )
 
@@ -225,11 +228,11 @@ class MapInfoCog(CogBase):
             diff_parts.append(
                 f"{EmjIcons.diff_by_index(map_data['difficulty'])} {diff_str} Expert"
             )
-        if map_data["placement_cur"] != -1:
+        if map_data["placement_cur"] != -1 and map_data["placement_cur"] <= ml_config['map_count']:
             diff_parts.append(
                 f"{EmjIcons.curver} #{map_data['placement_cur']} ({points(map_data['placement_cur'], ml_config)}pt)"
             )
-        # if map_data["placement_all"] != -1:
+        # if map_data["placement_all"] != -1 and map_data["placement_all"] <= ml_config['map_count']:
         #     diff_parts.append(
         #         f"{EmjIcons.allver} #{map_data['placement_all']} ({points(map_data['placement_cur'], ml_config)}pt)"
         #     )
@@ -266,7 +269,7 @@ class MapInfoCog(CogBase):
                 ),
                 inline=True,
             )
-        return "🗺️", "Map Overview", None, [embed]
+        return "🗺️", "Map Overview", MessageContent(embeds=[embed])
 
     @staticmethod
     def get_lcc_message(
@@ -276,7 +279,7 @@ class MapInfoCog(CogBase):
         emj = "<:m_lcc:1284093037391253526>"
         label = "Least Cash CHIMPS"
         if lcc_data is None:
-            return emj, label, "-# No LCCs for this map!", None
+            return emj, label, MessageContent(content="-# No LCCs for this map!")
 
         is_proof_image = lcc_data["lcc"]["proof"] and \
             any([
@@ -314,7 +317,7 @@ class MapInfoCog(CogBase):
             value=ply_list,
         )
 
-        return emj, label, None, [embed]
+        return emj, label, MessageContent(embeds=[embed])
 
     @staticmethod
     def get_r6start_message(
@@ -323,11 +326,11 @@ class MapInfoCog(CogBase):
         emj = "🎯"
         label = "Round 6 Start"
         if map_data["r6_start"] is None:
-            return emj, label, "-# No R6 Start info for this map!", None
+            return emj, label, MessageContent(content="-# No R6 Start info for this map!")
 
         content = f"Round 6 Start for [{map_data['name']}]({WEB_BASE_URL}/map/{map_data['code']}):\n" + \
                   map_data["r6_start"]
-        return emj, label, content, None
+        return emj, label, MessageContent(content=content)
 
 
 async def setup(bot: commands.Bot) -> None:

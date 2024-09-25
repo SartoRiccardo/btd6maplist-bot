@@ -1,4 +1,5 @@
 import discord
+from bot.utils.models import MessageContent
 from typing import Literal, Callable, Awaitable
 
 
@@ -22,7 +23,7 @@ MapPlacement = Literal[
 ]
 
 # emoji, page name, content, embed
-EmbedPage = tuple[str, str, str | None, list[discord.Embed] | None]
+EmbedPage = tuple[str, str, MessageContent]
 
 RequestPagesCb = Callable[[list[int]], Awaitable[dict[int, dict]]]
 PageContentBuilderCb = Callable[[int, dict[int, dict]], str | discord.Embed]
