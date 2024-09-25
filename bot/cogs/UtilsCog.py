@@ -1,5 +1,5 @@
 import discord
-from config import APP_ID, GH_REPO, BOT_NAME, EMBED_CLR
+from config import APP_ID, GH_REPO, BOT_NAME, EMBED_CLR, WEB_BASE_URL
 from discord.ext import commands
 from bot.cogs.CogBase import CogBase
 
@@ -100,6 +100,16 @@ class UtilsCog(CogBase):
             color=EMBED_CLR,
         )
         await interaction.response.send_message(embed=embed)
+
+    @discord.app_commands.command(name="website",
+                                  description="Get the URL to the Maplist website.")
+    async def cmd_website(self, interaction: discord.Interaction) -> None:
+        oak_cmd = await self.bot.get_app_command("oak")
+        await interaction.response.send_message(
+            content=f"→ → → {WEB_BASE_URL} ← ← ←\n"
+                    f"Wanna help make the website prettier? Set your own BTD6 profile "
+                    f"picture with the </oak:{oak_cmd.id}> command!"
+        )
 
 
 async def setup(bot: commands.Bot) -> None:
