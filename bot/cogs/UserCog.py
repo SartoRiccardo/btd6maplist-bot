@@ -7,7 +7,7 @@ from bot.utils.decos import autodoc
 from bot.utils.requests.maplist import get_maplist_user, get_user_completions, set_oak
 from bot.utils.requests.ninjakiwi import get_btd6_user
 from bot.exceptions import MaplistResNotFound
-from config import EMBED_CLR
+from config import EMBED_CLR, WEB_BASE_URL
 from bot.utils.emojis import EmjMedals, EmjIcons, EmjPlacements, EmjMisc
 
 
@@ -77,6 +77,10 @@ class UserCog(CogBase):
             description += f"- **Created Maps:** {len(profile['created_maps'])}\n"
         if comp_num:
             description += f"- **Completions Submitted:** {EmjMedals.win} {comp_num}\n"
+        # Never miss a chance to be cooler than others
+        if user.id == 1077309729942024302:
+            description += "- **Bots Created:** This one and some others\n" \
+                           f"- **Websites Created:** [{WEB_BASE_URL.split('//', 1)[1]}]({WEB_BASE_URL})"
 
         something = len(description) > 0
 
@@ -100,7 +104,7 @@ class UserCog(CogBase):
                 value=description,
                 inline=True,
             )
-        if user.id == interaction.user.id:
+        if user.id == interaction.user.id and profile["avatarURL"] is None:
             embed.set_footer(
                 text="You can set a profile picture either through the website "
                      "or the /oak command"
