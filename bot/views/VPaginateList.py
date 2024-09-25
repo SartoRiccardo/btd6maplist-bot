@@ -35,6 +35,7 @@ class VPaginateList(discord.ui.View):
         :param list_key: Key to access the list in the payload.
         """
         super().__init__(timeout=timeout)
+
         self.og_interaction = interaction
         self.total_pages = total_pages
         self.current_page = current_page
@@ -47,6 +48,9 @@ class VPaginateList(discord.ui.View):
 
         self.list_key = list_key
         self.additional_views = additional_views
+
+        if total_pages == 1:
+            return
 
         self.add_item(OwnerButton(
             self.og_interaction.user,
