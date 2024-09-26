@@ -20,7 +20,7 @@ class VPaginateList(discord.ui.View):
             request_cb: RequestPagesCb | None,
             message_build_cb: PageContentBuilderCb,
             additional_views: list[discord.ui.View] | None = None,
-            list_key: str = "entries",
+            list_key: str | None = "entries",
             timeout: float = None,
     ):
         """
@@ -96,12 +96,15 @@ class VPaginateList(discord.ui.View):
         needed = []
         start_idx, end_idx, req_page_start, req_page_end = get_page_idxs(page, self.items_page, self.items_page_srv)
         for srv_page_idx in range(req_page_start, req_page_end + 1):
+            if srv_page_idx not in saved_pages:
+                continue
             srv_page = saved_pages[srv_page_idx]
 
+            page_list = srv_page[self.list_key] if self.list_key else srv_page
             entry_sidx = start_idx % self.items_page_srv
-            count = min(len(srv_page[self.list_key]), entry_sidx + end_idx - start_idx + 1)
+            count = min(len(page_list), entry_sidx + end_idx - start_idx + 1)
             for i in range(entry_sidx, count):
-                needed.append(srv_page[self.list_key][i])
+                needed.append(page_list[i])
             start_idx += count - entry_sidx
 
         return needed

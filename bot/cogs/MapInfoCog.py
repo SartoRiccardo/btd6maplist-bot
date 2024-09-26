@@ -110,10 +110,10 @@ class MapInfoCog(CogBase):
         experts = await get_experts()
         experts = [exp for exp in experts if exp["difficulty"] == diffval]
 
-        def create_message(page: int, _sp=None) -> discord.Embed:
+        def create_message(entries: list[dict]) -> discord.Embed:
             content = "\n".join([
                 f"`{exp['code']}` ｌ {exp['name']}"
-                for exp in experts[(page-1)*items_page:page*items_page]
+                for exp in entries
             ])
             icon, diffq, desc = info[diffval]
             return discord.Embed(
@@ -123,18 +123,20 @@ class MapInfoCog(CogBase):
                 url=f"{WEB_BASE_URL}/experts?difficulty={diffq}",
             )
 
+        paginate_view = VPaginateList(
+            interaction,
+            math.ceil(len(experts) / items_page),
+            1,
+            {1: experts},
+            items_page,
+            len(experts),
+            None,
+            create_message,
+            list_key=None,
+        )
         await interaction.edit_original_response(
-            embed=create_message(1),
-            view=VPaginateList(
-                interaction,
-                math.ceil(len(experts) / items_page),
-                1,
-                {1: experts},
-                items_page,
-                len(experts),
-                None,
-                create_message,
-            ),
+            embed=create_message(paginate_view.get_needed_rows(1, {1: experts})),
+            view=paginate_view,
         )
 
     @discord.app_commands.command(
@@ -155,11 +157,11 @@ class MapInfoCog(CogBase):
             get_maplist_config(),
         )
 
-        def create_message(page: int, _sp=None) -> discord.Embed:
+        def create_message(entries: list[dict]) -> discord.Embed:
             content = "\n".join([
                 f"`{'#'+str(mlmap['placement']): >3}` (`{points(mlmap['placement'], cfg): >3}pt`) ｌ "
                 f"`{mlmap['code']}` ｌ {mlmap['name']}"
-                for mlmap in maplist[(page-1)*items_page:page*items_page]
+                for mlmap in entries
             ])
             return discord.Embed(
                 title=f"The Maplist",
@@ -168,18 +170,20 @@ class MapInfoCog(CogBase):
                 url=f"{WEB_BASE_URL}/list",
             )
 
+        paginate_view = VPaginateList(
+            interaction,
+            math.ceil(len(maplist) / items_page),
+            1,
+            {1: maplist},
+            items_page,
+            len(maplist),
+            None,
+            create_message,
+            list_key=None,
+        )
         await interaction.edit_original_response(
-            embed=create_message(1),
-            view=VPaginateList(
-                interaction,
-                math.ceil(len(maplist) / items_page),
-                1,
-                {1: maplist},
-                items_page,
-                len(maplist),
-                None,
-                create_message,
-            ),
+            embed=create_message(paginate_view.get_needed_rows(1, {1: maplist})),
+            view=paginate_view,
         )
 
     @staticmethod
