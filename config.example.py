@@ -3,7 +3,8 @@ APP_ID = "app-id-here"
 PRIVKEY_PATH = "btd6maplist-bot.pem"
 PRIVKEY_PSWD = None
 
-API_BASE_URL = "http://localhost:4000"
+API_BASE_PUBLIC_URL = "http://localhost:4000"
+API_BASE_URL = "http://localhost:4000"  # You can reference the Docker container if you do that
 WEB_BASE_URL = "http://localhost:3000"
 # Discord doesn't embed URLs with a file extension, and NK's map preview urls don't have one. Proxy it somehow.
 NK_PREVIEW_PROXY = lambda code: f"http://localhost:5000/map/{code}.jpg"

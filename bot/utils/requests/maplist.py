@@ -1,7 +1,7 @@
 import io
 import discord
 import bot.utils.http
-from config import API_BASE_URL
+from config import API_BASE_URL, API_BASE_PUBLIC_URL
 from bot.exceptions import MaplistResNotFound, ErrorStatusCode, BadRequest
 from bot.types import Format
 from cryptography.hazmat.primitives import hashes
@@ -260,3 +260,8 @@ async def reject_run(who: discord.User, run_id: int) -> None:
             raise MaplistResNotFound("completion")
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
+
+
+def get_banner_medals_url(banner_url: str, medals: dict) -> str:
+    banner_name = banner_url.split("/")[-1]
+    return f"{API_BASE_PUBLIC_URL}/img/medal-banner/{banner_name}?{urllib.parse.urlencode(medals)}"

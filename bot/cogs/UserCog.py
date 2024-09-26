@@ -6,7 +6,7 @@ from discord.ext import commands
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
 from bot.utils.formulas import get_page_idxs
-from bot.utils.requests.maplist import get_maplist_user, get_user_completions, set_oak
+from bot.utils.requests.maplist import get_maplist_user, get_user_completions, set_oak, get_banner_medals_url
 from bot.utils.requests.ninjakiwi import get_btd6_user
 from bot.views import VPages, VPaginateList
 from bot.utils.models import MessageContent
@@ -21,7 +21,11 @@ empty_profile = {
         "all": {"points": 0},
     },
     "created_maps": [],
+    "medals": {
+        "wins": 0,
+    },
     "avatarURL": "https://static-api.nkstatic.com/appdocs/4/assets/opendata/db32af61df5646951a18c60fe0013a31_ProfileAvatar01.png",
+    "bannerURL": "https://static-api.nkstatic.com/appdocs/4/assets/opendata/bbd8e1412f656b91db7df7aabbc1598b_TeamsBannerDeafult.png",
 }
 placements_emojis = {
     1: EmjPlacements.top1,
@@ -72,17 +76,15 @@ class UserCog(CogBase):
                 get_maplist_user(user.id),
                 get_user_completions(user.id),
             )
-            comp_num = compl["total"]
         except MaplistResNotFound:
-            comp_num = 0
             profile = empty_profile
 
         pages = [
-            ("ℹ️", "User Overview", self.get_user_message(interaction, user, profile, comp_num)),
+            ("ℹ️", "User Overview", self.get_user_message(interaction, user, profile)),
         ]
 
         views_to_load = []
-        if compl and comp_num > 0:
+        if compl and profile["medals"]["wins"] > 0:
             views_to_load.append(
                 VPages(interaction, pages, placeholder="Other user info", current_page=len(pages), autoload=False)
             )
@@ -170,13 +172,10 @@ class UserCog(CogBase):
             interaction: discord.Interaction,
             user: discord.User,
             profile: dict,
-            comp_num: int,
     ) -> MessageContent:
         description = ""
         if len(profile["created_maps"]):
-            description += f"- **Created Maps:** {len(profile['created_maps'])}\n"
-        if comp_num:
-            description += f"- **Completions Submitted:** {EmjMedals.win} {comp_num}\n"
+            description += f"- **Maps Created:** {len(profile['created_maps'])}\n"
         # Never miss a chance to be cooler than others
         if user.id == 1077309729942024302:
             description += "- **Bots Created:** This one and some others\n" \
@@ -189,7 +188,12 @@ class UserCog(CogBase):
             color=EMBED_CLR,
             description=description.strip(),
         )
+        if profile["medals"]["wins"] > 0:
+            banner_url = profile["bannerURL"] if profile["bannerURL"] else empty_profile["bannerURL"]
+            embed.set_image(url=get_banner_medals_url(banner_url, profile["medals"]))
+
         embed.set_thumbnail(url=profile["avatarURL"] if profile["avatarURL"] else empty_profile["avatarURL"])
+
         if profile["maplist"]["current"]["points"]:  # Copy for allvers
             something = True
             prf = profile["maplist"]["current"]
@@ -204,6 +208,7 @@ class UserCog(CogBase):
                 value=description,
                 inline=True,
             )
+
         if user.id == interaction.user.id and profile["avatarURL"] is None:
             embed.set_footer(
                 text="You can set a profile picture either through the website "
