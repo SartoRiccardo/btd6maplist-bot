@@ -54,7 +54,8 @@ class MRunSubmission(ModalBase, title="Submit a Completion"):
 
     def validate_fields(self) -> str | None:
         if self.vproof_url and not is_link(self.vproof_url.value):
-            return "Proof URL is not a valid link!"
+            return "Proof URL is not a valid link!\n" \
+                   "-# You can only put __one__ link here. Additional ones should go in Notes."
         if self.lcc_saveup and not self.lcc_saveup.value.isnumeric():
             return "LCC Saveup must be a positive number!"
 
