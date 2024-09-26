@@ -95,7 +95,7 @@ class UserCog(CogBase):
             view.load_items()
 
         pages_view = None
-        if len(pages) > 0:
+        if len(pages) > 1:
             pages_view = VPages(interaction, pages, placeholder="Other user info")
 
         await interaction.edit_original_response(
