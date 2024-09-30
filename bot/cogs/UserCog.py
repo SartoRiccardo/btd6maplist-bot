@@ -193,6 +193,8 @@ class UserCog(CogBase):
         if profile["medals"]["wins"] > 0:
             banner_url = profile["bannerURL"] if profile["bannerURL"] else empty_profile["bannerURL"]
             embed.set_image(url=get_banner_medals_url(banner_url, profile["medals"]))
+        elif profile["bannerURL"] and profile != empty_profile:
+            embed.set_image(url=profile["bannerURL"])
 
         embed.set_thumbnail(url=profile["avatarURL"] if profile["avatarURL"] else empty_profile["avatarURL"])
 
