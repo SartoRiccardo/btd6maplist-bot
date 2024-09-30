@@ -366,7 +366,7 @@ class MapInfoCog(CogBase):
             map_data: dict,
             pages_view: VPages,
     ) -> MessageContent:
-        items_page = 20
+        items_page = 15
         items_page_srv = 50
         _si, _ei, req_page_start, req_page_end = get_page_idxs(1, items_page, items_page_srv)
 
