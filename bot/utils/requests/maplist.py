@@ -155,7 +155,7 @@ async def submit_run(
         "submitter": {
             "id": user.id,
             "username": user.name,
-            "avatar_url": user.avatar.url,
+            "avatar_url": user.display_avatar.url,
         },
         "format": run_format,
         "notes": notes,
