@@ -9,7 +9,7 @@ from bot.utils.formulas import get_page_idxs
 from bot.utils.requests.maplist import get_maplist_user, get_user_completions, set_oak, get_banner_medals_url
 from bot.utils.requests.ninjakiwi import get_btd6_user
 from bot.views import VPages, VPaginateList
-from bot.utils.models import MessageContent
+from bot.utils.models import MessageContent, LazyMessageContent
 from bot.exceptions import MaplistResNotFound
 from config import EMBED_CLR, WEB_BASE_URL
 from bot.utils.emojis import EmjMedals, EmjIcons, EmjPlacements, EmjMisc
@@ -70,12 +70,8 @@ class UserCog(CogBase):
     ):
         await interaction.response.defer(ephemeral=hide)
 
-        compl = None
         try:
-            profile, compl = await asyncio.gather(
-                get_maplist_user(user.id),
-                get_user_completions(user.id),
-            )
+            profile = await get_maplist_user(user.id)
         except MaplistResNotFound:
             profile = empty_profile
 
@@ -84,13 +80,13 @@ class UserCog(CogBase):
         ]
 
         views_to_load = []
-        if compl and profile["medals"]["wins"] > 0:
+        if profile["medals"]["wins"] > 0:
             views_to_load.append(
                 VPages(interaction, pages, placeholder="Other user info", current_page=len(pages), autoload=False)
             )
             pages.append((
                 EmjMedals.win, "Completions",
-                self.get_completions_message(interaction, user, compl, views_to_load[-1]),
+                self.get_completions_message(interaction, user, views_to_load[-1]),
             ))
 
         for view in views_to_load:
@@ -109,11 +105,11 @@ class UserCog(CogBase):
     def get_completions_message(
             interaction: discord.Interaction,
             user: discord.User,
-            completions: dict,
             pages_view: VPages,
     ) -> MessageContent:
-        items_page = 20
+        items_page = 15
         items_page_srv = 50
+        _si, _ei, req_page_start, req_page_end = get_page_idxs(1, items_page, items_page_srv)
 
         async def request_completions(pages: list[int]):
             lb_data = await asyncio.gather(*[
@@ -134,11 +130,12 @@ class UserCog(CogBase):
             medal_spots = 3
             for i, entry in enumerate(entries):
                 format_emj = EmjIcons.format(entry["format"])
-                comp_medals = [EmjMedals.bb if entry["black_border"] else EmjMedals.win]
+                comp_medals = []
                 if entry["format"] <= 50 and entry["no_geraldo"]:
                     comp_medals.append(EmjMedals.no_opt_hero)
                 if entry["current_lcc"]:
                     comp_medals.append(EmjMedals.lcc)
+                comp_medals.append(EmjMedals.bb if entry["black_border"] else EmjMedals.win)
                 for _ in range(len(comp_medals), medal_spots):
                     comp_medals.insert(0, EmjMisc.blank)
 
@@ -148,24 +145,29 @@ class UserCog(CogBase):
                 content += row_template.format(format_emj, " ".join(comp_medals), map_name)
             return content.strip()
 
-        comp_pages = {1: completions}
-        client_pages = math.ceil(completions["total"] / items_page)
-        view = VPaginateList(
-            interaction,
-            client_pages,
-            1,
-            comp_pages,
-            items_page,
-            items_page_srv,
-            request_completions,
-            build_message,
-            additional_views=[pages_view],
-            list_key="completions",
-        )
-        return MessageContent(
-            content=build_message(view.get_needed_rows(1, comp_pages)),
-            view=view,
-        )
+        async def load_message() -> MessageContent:
+            pages_to_req = [pg for pg in range(req_page_start, req_page_end+1)]
+            comp_pages = await request_completions(pages_to_req)
+
+            client_pages = math.ceil(comp_pages[req_page_start]["total"] / items_page)
+            view = VPaginateList(
+                interaction,
+                client_pages,
+                1,
+                comp_pages,
+                items_page,
+                items_page_srv,
+                request_completions,
+                build_message,
+                additional_views=[pages_view],
+                list_key="completions",
+            )
+            return MessageContent(
+                content=view.message_on_page(1),
+                view=view,
+            )
+
+        return LazyMessageContent(load_message)
 
     @staticmethod
     def get_user_message(

@@ -92,6 +92,11 @@ class VPaginateList(discord.ui.View):
                 disabled=self.current_page >= self.total_pages,
             ))
 
+    def message_on_page(self, page: int) -> str | discord.Embed:
+        return self.message_build_cb(
+            self.get_needed_rows(page, self.pages_saved)
+        )
+
     def get_needed_rows(self, page: int, saved_pages: dict[int, dict | list]) -> list[Any]:
         needed = []
         start_idx, end_idx, req_page_start, req_page_end = get_page_idxs(page, self.items_page, self.items_page_srv)

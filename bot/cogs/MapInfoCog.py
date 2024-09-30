@@ -421,7 +421,7 @@ class MapInfoCog(CogBase):
                 list_key="completions",
             )
             return MessageContent(
-                content=build_message(view.get_needed_rows(1, comp_pages)),
+                content=view.message_on_page(1),
                 view=view,
             )
 
