@@ -347,7 +347,8 @@ class SubmissionCog(CogBase):
         modal = MRunSubmission(
             process_callback,
             is_lcc=lcc,
-            req_video=lcc or no_optimal_hero or black_border,
+            req_video=lcc or no_optimal_hero or black_border or
+                      any([role.id in MAPLIST_ROLES["needs_rec"] for role in interaction.user.roles]),
         )
 
         try:
