@@ -14,11 +14,12 @@ from bot.utils.decos import autodoc
 from bot.utils.models import MessageContent, LazyMessageContent
 from bot.views import VPages, VPaginateList
 from config import WEB_BASE_URL, EMBED_CLR, NK_PREVIEW_PROXY
-from bot.types import EmbedPage, ExpertDifficulty
+from bot.types import ExpertDifficulty
 from bot.utils.emojis import EmjHeros, EmjIcons, EmjMisc, EmjMedals
 from bot.utils.formulas import points
 from bot.utils.colors import EmbedColor
 from bot.utils.formulas import get_page_idxs
+from bot.utils.misc import image_formats
 
 
 class MapInfoCog(CogBase):
@@ -314,7 +315,7 @@ class MapInfoCog(CogBase):
         is_proof_image = lcc_data["lcc"]["proof"] and \
             any([
                 lcc_data["lcc"]["proof"].endswith(f".{ext}")
-                for ext in ["jpg", "jpeg", "webp", "png"]
+                for ext in image_formats
             ])
 
         ply_list = lcc_data["users"][0]["name"] \

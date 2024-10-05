@@ -10,6 +10,7 @@ from bot.views.modals import MMapSubmission, MRunSubmission
 from bot.types import MapPlacement
 from bot.exceptions import BadRequest, MaplistResNotFound, ErrorStatusCode
 from config import MAPLIST_GID, WH_RUN_SUBMISSION_IDS, MAPLIST_ROLES, WEB_BASE_URL
+from bot.utils.misc import image_formats
 
 
 list_rules_url = "https://discord.com/channels/1162188507800944761/1162193272320569485/1272011602228678747"
@@ -146,9 +147,9 @@ class SubmissionCog(CogBase):
                 ephemeral=True,
             )
             return False
-        if proof.content_type.split("/")[-1].lower() not in ["webp", "png", "jpeg", "jpg"]:
+        if proof.content_type.split("/")[-1].lower() not in image_formats:
             await interaction.response.send_message(
-                content=f"❌ Admissible image formats: `webp`, `png`, `jpg`",
+                content=f"❌ Admissible image formats: `{'`, `'.join(image_formats)}`",
                 ephemeral=True,
             )
             return False
