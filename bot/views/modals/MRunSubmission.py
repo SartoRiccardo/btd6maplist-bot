@@ -1,5 +1,5 @@
 import discord
-from bot.utils.formulas import is_link
+import validators
 from bot.types import SubmitRunModalCb
 import bot.views
 from bot.utils.emojis import EmjMisc
@@ -53,7 +53,7 @@ class MRunSubmission(ModalBase, title="Submit a Completion"):
             self.add_item(self.lcc_saveup)
 
     def validate_fields(self) -> str | None:
-        if self.vproof_url and not is_link(self.vproof_url.value):
+        if self.vproof_url and not validators.url(self.vproof_url.value):
             return "Proof URL is not a valid link!\n" \
                    "-# You can only put __one__ link here. Additional ones should go in Notes."
         if self.lcc_saveup and not self.lcc_saveup.value.isnumeric():
@@ -67,8 +67,8 @@ class MRunSubmission(ModalBase, title="Submit a Completion"):
                     self.submit_cb, self.is_lcc, self.req_video,
                     init_values={
                         "notes": self.notes.value,
-                        "vproof_url": self.vproof_url.value,
-                        "lcc_saveup": self.lcc_saveup.value,
+                        "vproof_url": self.vproof_url.value if self.vproof_url else None,
+                        "lcc_saveup": self.lcc_saveup.value if self.lcc_saveup else None,
                     },
                 )
             )
