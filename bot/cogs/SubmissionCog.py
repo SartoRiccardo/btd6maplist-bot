@@ -4,12 +4,26 @@ from discord.ext import commands
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
 from bot.utils.handlers import handle_error
-from bot.utils.requests.maplist import submit_map, get_maplist_user, submit_run, get_maplist_map, accept_run, reject_run
+from bot.utils.requests.maplist import (
+    submit_map,
+    get_maplist_user,
+    submit_run,
+    get_maplist_map,
+    accept_run,
+    reject_run,
+    reject_map,
+)
 from bot.views import VRulesAccept
 from bot.views.modals import MMapSubmission, MRunSubmission
 from bot.types import MapPlacement
 from bot.exceptions import BadRequest, MaplistResNotFound, ErrorStatusCode
-from config import MAPLIST_GID, WH_RUN_SUBMISSION_IDS, MAPLIST_ROLES, WEB_BASE_URL
+from config import (
+    MAPLIST_GID,
+    WH_RUN_SUBMISSION_IDS,
+    WH_MAP_SUBMISSION_IDS,
+    MAPLIST_ROLES,
+    WEB_BASE_URL,
+)
 from bot.utils.misc import image_formats
 
 
@@ -74,10 +88,10 @@ async def ctxm_accept_submission(interaction: discord.Interaction, message: disc
     await interaction.response.defer(ephemeral=True)
     try:
         await accept_run(interaction.user, run_id)
-        response = "✅ Submitted successfully!\n" \
+        response = "✅ Completion accepted!\n" \
                    f"You can edit it [on the website]({WEB_BASE_URL}/completions/{run_id}) if needed."
     except BadRequest:
-        response = "That run was already accepted!"
+        response = "That completion was already accepted!"
     except MaplistResNotFound:
         response = "Couldn't find that completion!\n" \
                    "-# Maybe it was rejected?"
@@ -87,29 +101,65 @@ async def ctxm_accept_submission(interaction: discord.Interaction, message: disc
         response = "Can't accept your own submission!"
     await interaction.edit_original_response(content=response)
 
+ctxm_accept_submission.error(handle_error)
 
-@discord.app_commands.context_menu(name="Reject Completion")
+
+@discord.app_commands.context_menu(name="Reject Submission")
 @discord.app_commands.guilds(MAPLIST_GID)
 async def ctxm_reject_submission(interaction: discord.Interaction, message: discord.Message):
-    run_id = await check_submission(interaction, message)
-    if not isinstance(run_id, int):
-        return
+    async def reject_completion_submission():
+        run_id = await check_submission(interaction, message)
+        if not isinstance(run_id, int):
+            return
 
-    await interaction.response.defer(ephemeral=True)
-    try:
-        await reject_run(interaction.user, run_id)
-        response = "✅ Deleted successfully!\n" \
-                   f"If this was a mistake, you can insert it manually on the website, on the map's page."
-    except BadRequest:
-        response = "That run was already accepted!\n" \
-                   "-# If you wanted to delete it, do so on the website."
-    except MaplistResNotFound:
-        response = "Couldn't find that completion!\n" \
-                   "-# Maybe it was rejected?"
-    await interaction.edit_original_response(content=response)
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await reject_run(interaction.user, run_id)
+            response = "✅ Rejected successfully!\n" \
+                       f"If this was a mistake, you can insert it manually on the website, on the map's page."
+        except BadRequest:
+            response = "That run was already accepted!\n" \
+                       "-# If you wanted to delete it, do so on the website."
+        except MaplistResNotFound:
+            response = "Couldn't find that completion!\n" \
+                       "-# Maybe it was rejected?"
+        await interaction.edit_original_response(content=response)
 
+    async def reject_map_submission():
+        if not len(message.embeds) or \
+                message.embeds[0].title is None or \
+                " - " not in message.embeds[0].title:
+            return await interaction.response.send_message(
+                content="That's not a submission?",
+                ephemeral=True,
+            )
+        code = message.embeds[0].title.split(" - ")[-1]
 
-ctxm_accept_submission.error(handle_error)
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await reject_map(interaction.user, code)
+            response = "✅ Rejected successfully!\n" \
+                       f"If this was a mistake, you can simply insert the map manually."
+        except BadRequest:
+            response = "That run was already accepted!\n" \
+                       "-# If you wanted to delete it, do so on the website."
+        except MaplistResNotFound:
+            response = "Couldn't find that completion!\n" \
+                       "-# Maybe it was rejected?"
+        await interaction.edit_original_response(content=response)
+
+    if message.webhook_id:
+        for key in WH_RUN_SUBMISSION_IDS:
+            if message.webhook_id in WH_MAP_SUBMISSION_IDS[key]:
+                return await reject_map_submission()
+            if message.webhook_id in WH_RUN_SUBMISSION_IDS[key]:
+                return await reject_completion_submission()
+
+    return await interaction.response.send_message(
+        content="That's not a submission?",
+        ephemeral=True,
+    )
+
 ctxm_reject_submission.error(handle_error)
 
 

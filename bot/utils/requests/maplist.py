@@ -265,3 +265,24 @@ async def reject_run(who: discord.User, run_id: int) -> None:
 def get_banner_medals_url(banner_url: str, medals: dict) -> str:
     banner_name = banner_url.split("/")[-1]
     return f"{API_BASE_PUBLIC_URL}/img/medal-banner/{banner_name}?{urllib.parse.urlencode(medals)}"
+
+
+async def reject_map(who: discord.User, code: str) -> None:
+    data = {
+        "user": {
+            "id": str(who.id),
+            "username": who.name,
+            "name": who.display_name,
+        },
+    }
+    data_str = json.dumps(data)
+    signature = sign(f"{code}{data_str}".encode())
+
+    payload = {"data": data_str, "signature": signature}
+    async with http.client.delete(f"{API_BASE_URL}/maps/submit/{code}/bot", json=payload) as resp:
+        if resp.status == 400:
+            raise BadRequest(await resp.json())
+        elif resp.status == 404:
+            raise MaplistResNotFound("map submission")
+        if not resp.ok:
+            raise ErrorStatusCode(resp.status)
