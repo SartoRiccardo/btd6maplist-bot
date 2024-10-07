@@ -26,6 +26,10 @@ WH_RUN_SUBMISSION_IDS: dict[str, list[int]] = {
     "expert": [],
     "list": [],
 }
+WH_MAP_SUBMISSION_IDS: dict[str, list[int]] = {
+    "expert": [],
+    "list": [],
+}
 
 # Will have access to the commands in bot/cogs/OwnerCog.py
 CO_OWNER_IDS: list[int] = [
