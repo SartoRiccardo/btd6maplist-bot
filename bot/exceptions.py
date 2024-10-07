@@ -24,7 +24,11 @@ class BadRequest(Exception):
         self.errors = resp_json["errors"]
 
     def formatted_exc(self) -> str:
-        return "\n".join([
-            f"- `{key}`: {self.errors[key]}"
-            for key in self.errors
-        ])
+        errors = []
+        for key in self.errors:
+            err = "- "
+            if len(key):
+                err += f"`{key}`: "
+            err += self.errors[key]
+            errors.append(err)
+        return "\n".join(errors)
