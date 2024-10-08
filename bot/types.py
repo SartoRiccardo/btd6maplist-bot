@@ -5,7 +5,7 @@ from typing import Literal, Callable, Awaitable, Any
 
 Format = Literal["Current Version"]
 LbType = Literal["Points", "LCCs"]
-ExpertDifficulty = Literal["Casual Expert", "Medium Expert", "High Expert", "True Expert"]
+ExpertDifficulty = Literal["Casual Expert", "Medium Expert", "High Expert", "True Expert", "Extreme Expert"]
 MapPlacement = Literal[
     "Maplist / Top 3",
     "Maplist / Top 10",
@@ -20,6 +20,8 @@ MapPlacement = Literal[
     "Experts / High Expert",
     "Experts / High-True",
     "Experts / True Expert",
+    "Experts / True-Extreme",
+    "Experts / Extreme Expert",
 ]
 
 # emoji, page name, content, embed
