@@ -316,8 +316,16 @@ class SubmissionCog(CogBase):
         name="run",
         description="Submit a run on a map. If necessary, the command will ask you for video proof later!",
     )
+    @discord.app_commands.rename(
+        proof_opt_1="proof_optional_1",
+        proof_opt_2="proof_optional_2",
+        proof_opt_3="proof_optional_3",
+    )
     @discord.app_commands.describe(
-        proof="Image proof of you beating CHIMPS on the map (max 3MB)"
+        proof="Image proof of you beating CHIMPS on the map (max 3MB)",
+        proof_opt_1="An additional proof image you may want to provide.",
+        proof_opt_2="An additional proof image you may want to provide.",
+        proof_opt_3="An additional proof image you may want to provide.",
     )
     @autodoc
     async def cmd_submit_run(
@@ -328,11 +336,14 @@ class SubmissionCog(CogBase):
             no_optimal_hero: bool = False,
             black_border: bool = False,
             is_lcc: bool = False,
+            proof_opt_1: discord.Attachment = None,
+            proof_opt_2: discord.Attachment = None,
+            proof_opt_3: discord.Attachment = None,
     ):
         await self.submit_run(
             interaction,
             map_id,
-            proof,
+            [proof, proof_opt_1, proof_opt_2, proof_opt_3],
             no_optimal_hero,
             black_border,
             is_lcc,
@@ -367,30 +378,32 @@ class SubmissionCog(CogBase):
             self,
             interaction: discord.Interaction,
             map_id: str,
-            proof: discord.Attachment,
+            proofs: list[discord.Attachment | None],
             no_optimal_hero: bool = False,
             black_border: bool = False,
             lcc: bool = False,
     ):
-        check = await self.check_submission_proof(interaction, proof)
-        if not check:
-            return
+        proofs = [p for p in proofs if p is not None]
+        for p in proofs:
+            check = await self.check_submission_proof(interaction, p)
+            if not check:
+                return
 
         async def process_callback(
                 interaction: discord.Interaction,
                 notes: str | None,
-                vproof_url: str | None,
+                vproof_url: list[str] | None,
                 leftover: int | None
         ):
             await self.process_run_submission(
                 interaction,
                 map_id,
-                proof,
+                proofs,
                 no_optimal_hero,
                 black_border,
                 lcc,
                 notes,
-                vproof_url,
+                vproof_url if vproof_url else [],
                 leftover,
             )
 
@@ -419,12 +432,12 @@ class SubmissionCog(CogBase):
     async def process_run_submission(
             interaction: discord.Interaction,
             map_id: str,
-            proof: discord.Attachment,
+            proofs: list[discord.Attachment],
             no_optimal_hero: bool,
             black_border: bool,
             is_lcc: bool,
             notes: str | None,
-            vproof_url: str | None,
+            vproof_url: list[str],
             leftover: int | None,
     ):
         for rl in interaction.user.roles:
@@ -444,7 +457,7 @@ class SubmissionCog(CogBase):
             await submit_run(
                 interaction.user,
                 map_id,
-                proof,
+                proofs,
                 no_optimal_hero,
                 black_border,
                 is_lcc,

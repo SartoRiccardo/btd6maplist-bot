@@ -1,17 +1,21 @@
 import io
+import os
+import random
+import string
 import discord
 import bot.utils.http
-from config import API_BASE_URL, API_BASE_PUBLIC_URL
+from config import API_BASE_URL, API_BASE_PUBLIC_URL, DATA_PATH
 from bot.exceptions import MaplistResNotFound, ErrorStatusCode, BadRequest
 from bot.types import Format
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.asymmetric import padding, utils
 import json
 from aiohttp import FormData
 import base64
 import urllib.parse
 
 http = bot.utils.http
+os.makedirs(os.path.join(DATA_PATH, "tmp"), exist_ok=True)
 
 
 # Signature methods & vulnerabilities: https://en.wikipedia.org/wiki/Digital_signature#Method
@@ -25,6 +29,28 @@ def sign(message: bytes) -> str:
             salt_length=padding.PSS.MAX_LENGTH,
         ),
         algorithm=hashes.SHA256(),
+    )
+    return base64.b64encode(signature).decode()
+
+
+def partial_sign(message: bytes, current: hashes.Hash | None = None) -> hashes.Hash:
+    if current is None:
+        current = hashes.Hash(hashes.SHA256())
+    current.update(message)
+    return current
+
+
+def finish_sign(current: hashes.Hash) -> str:
+    sha256 = hashes.SHA256()
+
+    digest = current.finalize()
+    signature = http.private_key.sign(
+        digest,
+        padding.PSS(
+            padding.MGF1(sha256),
+            salt_length=padding.PSS.MAX_LENGTH,
+        ),
+        utils.Prehashed(sha256),
     )
     return base64.b64encode(signature).decode()
 
@@ -142,12 +168,12 @@ async def submit_map(
 async def submit_run(
         user: discord.User,
         map_id: str,
-        proof: discord.Attachment,
+        proofs: list[discord.Attachment],
         no_optimal_hero: bool,
         black_border: bool,
         is_lcc: bool,
         notes: str | None,
-        vproof_url: str | None,
+        vproof_url: list[str],
         leftover: int | None,
         run_format: int,
 ) -> None:
@@ -166,17 +192,19 @@ async def submit_run(
         "video_proof_url": vproof_url,
     }
     data_str = json.dumps(data)
-    proof_contents = await proof.read()
-    signature = sign((map_id+data_str).encode() + proof_contents)
+    contents_hash = partial_sign((map_id+data_str).encode())
 
     form_data = FormData()
-    form_data.add_field(
-        "proof_completion",
-        io.BytesIO(proof_contents),
-        filename=proof.filename,
-        content_type=proof.content_type,
-    )
-    form_data.add_field("data", json.dumps({"data": data_str, "signature": signature}))
+    for i, file in enumerate(proofs):
+        fcontents = await file.read()
+        contents_hash = partial_sign(fcontents, current=contents_hash)
+        form_data.add_field(
+            f"proof_completion[{i}]",
+            io.BytesIO(fcontents),
+            filename=file.filename,
+            content_type=file.content_type,
+        )
+    form_data.add_field("data", json.dumps({"data": data_str, "signature": finish_sign(contents_hash)}))
 
     async with http.client.post(f"{API_BASE_URL}/maps/{map_id}/completions/submit/bot", data=form_data) as resp:
         if resp.status == 400:
