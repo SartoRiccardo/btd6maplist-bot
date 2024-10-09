@@ -66,6 +66,7 @@ async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> dict:
     fmt = {
         "Current Version": "current",
         "All Versions": "all",
+        "Expert List": "experts",
     }.get(game_format, "current")
     value = {
         "Points": "points",

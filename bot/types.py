@@ -3,7 +3,7 @@ from bot.utils.models import MessageContent
 from typing import Literal, Callable, Awaitable, Any
 
 
-Format = Literal["Current Version"]
+Format = Literal["Current Version", "Expert List"]
 LbType = Literal["Points", "LCCs"]
 ExpertDifficulty = Literal["Casual Expert", "Medium Expert", "High Expert", "True Expert"]
 MapPlacement = Literal[
