@@ -20,7 +20,7 @@ class EmjIcons(BaseEmjClass):
 
     @classmethod
     def diff_by_index(cls, idx: int) -> str:
-        return [cls.casual, cls.medium, cls.hard, cls.true][idx]
+        return [cls.casual, cls.medium, cls.hard, cls.true, cls.extreme][idx]
 
     @classmethod
     def format(cls, fmt: int) -> str | None:
