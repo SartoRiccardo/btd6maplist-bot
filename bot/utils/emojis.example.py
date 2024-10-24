@@ -11,6 +11,7 @@ class EmjIcons(BaseEmjClass):
     medium = "😌"
     hard = "😏"
     true = "😈"
+    extreme = "🔥"
     packs = "📦"
 
     curver = "⏰"

@@ -25,6 +25,7 @@ from config import (
     WEB_BASE_URL,
 )
 from bot.utils.misc import image_formats
+from typing import get_args
 
 
 list_rules_url = "https://discord.com/channels/1162188507800944761/1162193272320569485/1272011602228678747"
@@ -268,25 +269,16 @@ class SubmissionCog(CogBase):
                     ephemeral=True,
                 )
 
+        options = get_args(MapPlacement)
         proposed_idxs = {
-            "list": [
-                "Maplist / Top 3",
-                "Maplist / Top 10",
-                "Maplist / #11 ~ 20",
-                "Maplist / #21 ~ 30",
-                "Maplist / #31 ~ 40",
-                "Maplist / #41 ~ 50",
-            ],
-            "experts": [
-                "Experts / Casual Expert",
-                "Experts / Casual-Medium",
-                "Experts / Medium Expert",
-                "Experts / Medium-High",
-                "Experts / High Expert",
-                "Experts / High-True",
-                "Experts / True Expert",
-            ],
+            "list": [],
+            "experts": [],
         }
+        for opt in options:
+            if opt.startswith("Maplist /"):
+                proposed_idxs["list"].append(opt)
+            else:
+                proposed_idxs["experts"].append(opt)
 
         await interaction.response.defer(
             ephemeral=True,
