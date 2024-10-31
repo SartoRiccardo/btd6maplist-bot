@@ -1,0 +1,4 @@
+services:
+  btd6maplist_bot:
+    build:
+      context: .

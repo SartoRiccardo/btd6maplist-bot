@@ -1,7 +1,5 @@
 import io
 import os
-import random
-import string
 import discord
 import bot.utils.http
 from config import API_BASE_URL, API_BASE_PUBLIC_URL, DATA_PATH
