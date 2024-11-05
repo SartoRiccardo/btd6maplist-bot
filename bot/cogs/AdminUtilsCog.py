@@ -11,7 +11,7 @@ from bot.utils.requests.ninjakiwi import get_btd6_custom_map
 
 
 class AdminUtilsCog(CogBase):
-    close_voting_after = timedelta(seconds=3600*24)
+    close_voting_after = timedelta(seconds=3600*36)
     help_descriptions = {
         "leaderboard": "Get the Maplist leaderboard. You can choose format and page.",
     }
@@ -81,7 +81,6 @@ class AdminUtilsCog(CogBase):
             content=message.content,
             embed=embed,
         )
-        await message.clear_reactions()
         await message.unpin()
 
     @discord.app_commands.guilds(MAPLIST_GID)
