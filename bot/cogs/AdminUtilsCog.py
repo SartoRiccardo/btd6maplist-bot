@@ -11,7 +11,7 @@ from bot.utils.requests.ninjakiwi import get_btd6_custom_map
 
 
 class AdminUtilsCog(CogBase):
-    close_voting_after = timedelta(seconds=5)
+    close_voting_after = timedelta(seconds=3600*24)
     help_descriptions = {
         "leaderboard": "Get the Maplist leaderboard. You can choose format and page.",
     }
