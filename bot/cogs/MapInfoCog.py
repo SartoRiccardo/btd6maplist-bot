@@ -316,11 +316,10 @@ class MapInfoCog(CogBase):
         if lcc_data is None:
             return MessageContent(content="-# No LCCs for this map!")
 
-        is_proof_image = lcc_data["lcc"]["proof"] and \
-            any([
-                lcc_data["lcc"]["proof"].endswith(f".{ext}")
-                for ext in image_formats
-            ])
+        image_proofs = [
+            proof_url for proof_url in lcc_data["subm_proof_img"]
+            if any(proof_url.endswith(f".{ext}") for ext in image_formats)
+        ]
 
         ply_list = lcc_data["users"][0]["name"] \
             if len(lcc_data["users"]) == 1 else \
@@ -334,25 +333,29 @@ class MapInfoCog(CogBase):
         ]
         medals_str = " ".join([mdl for mdl in medals if mdl is not None])
 
+        map_url = f"{WEB_BASE_URL}/map/{map_data['code']}"
         embed = discord.Embed(
             color=EMBED_CLR,
             title="Least Cash CHIMPS",
             description=f"{format_emj} / {medals_str}\n"
                         f"Saveup: {EmjMisc.cash} **{lcc_data['lcc']['leftover']:,}**",
-            url=None if is_proof_image else lcc_data["lcc"]["proof"],
+            url=map_url,
         )
-        embed.set_author(
-            name=map_data["name"],
-            url=f"{WEB_BASE_URL}/map/{map_data['code']}",
-        )
-        if is_proof_image:
-            embed.set_image(url=lcc_data["lcc"]["proof"])
+        embed.set_author(name=map_data["name"])
+        if len(image_proofs):
+            embed.set_image(url=image_proofs[0])
         embed.add_field(
             name="Player" + ("s" if len(lcc_data["users"]) > 1 else ""),
             value=ply_list,
         )
 
-        return MessageContent(embeds=[embed])
+        embeds = [embed]
+        for proof_url in image_proofs[1:4]:
+            embed = discord.Embed(url=map_url)
+            embed.set_image(url=proof_url)
+            embeds.append(embed)
+
+        return MessageContent(embeds=embeds)
 
     @staticmethod
     def get_r6start_message(

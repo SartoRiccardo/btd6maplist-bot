@@ -82,8 +82,7 @@ async def get_maplist_config() -> dict:
     async with http.client.get(f"{API_BASE_URL}/config") as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
-        config = await resp.json()
-        return {cfg["name"]: cfg["value"] for cfg in config}
+        return await resp.json()
 
 
 async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> dict:
