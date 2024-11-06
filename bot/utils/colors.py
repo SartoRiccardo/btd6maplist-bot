@@ -3,6 +3,11 @@ class EmbedColor:
     experts = 0x5e35b1
     maplist = 0x00897b
 
+    pending = 0x1e88e5
+    success = 0x43a047
+    fail = 0xb71c1c
+    tie = 0xec407a
+
 
 class Color:
     HEADER = '\033[95m'

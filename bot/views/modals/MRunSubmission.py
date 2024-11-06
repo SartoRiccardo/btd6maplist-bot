@@ -1,3 +1,4 @@
+import re
 import discord
 import validators
 from bot.types import SubmitRunModalCb
@@ -24,7 +25,7 @@ class MRunSubmission(ModalBase, title="Submit a Completion"):
         self.notes = discord.ui.TextInput(
             label="Notes",
             placeholder="Additional notes about the run, if any (people who helped, "
-                        "strategy, links to additional proof, ...)",
+                        "strategy, ...)",
             max_length=500,
             style=discord.TextStyle.paragraph,
             required=False,
@@ -35,8 +36,8 @@ class MRunSubmission(ModalBase, title="Submit a Completion"):
         self.vproof_url = None
         if self.req_video or self.is_lcc:
             self.vproof_url = discord.ui.TextInput(
-                label="Video Proof URL",
-                placeholder="https://youtube.com/...",
+                label="Video Proof URL(s)",
+                placeholder="https://youtube.com/... https://youtube.com/... ",
                 required=True,
                 default=init_values.get("vproof_url", None),
             )
@@ -53,11 +54,16 @@ class MRunSubmission(ModalBase, title="Submit a Completion"):
             self.add_item(self.lcc_saveup)
 
     def validate_fields(self) -> str | None:
-        if self.vproof_url and not validators.url(self.vproof_url.value):
-            return "Proof URL is not a valid link!\n" \
-                   "-# You can only put __one__ link here. Additional ones should go in Notes."
+        if self.vproof_url and len(self.get_vproof_urls()) == 0:
+            return "Proof URL doesn't have valid links!"
         if self.lcc_saveup and not self.lcc_saveup.value.isnumeric():
             return "LCC Saveup must be a positive number!"
+
+    def get_vproof_urls(self) -> list[str] | None:
+        if self.vproof_url is None:
+            return None
+        words = re.split(r"\s+", self.vproof_url.value)
+        return [wd for wd in words if validators.url(wd)]
 
     async def on_submit(self, interaction: discord.Interaction):
         if err := self.validate_fields():
@@ -80,12 +86,11 @@ class MRunSubmission(ModalBase, title="Submit a Completion"):
             )
 
         notes = self.notes.value
-        vproof_url = self.vproof_url.value if self.vproof_url else None
         saveup = int(self.lcc_saveup.value) if self.lcc_saveup else None
 
         await self.submit_cb(
             interaction,
             notes if len(notes) else None,
-            vproof_url,
+            self.get_vproof_urls(),
             saveup,
         )

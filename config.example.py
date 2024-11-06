@@ -30,6 +30,10 @@ WH_MAP_SUBMISSION_IDS: dict[str, list[int]] = {
     "expert": [],
     "list": [],
 }
+MAPLIST_VOTE_CH = {  # Ping channel ID, Ping role ID
+    "Maplist": (1070699330194911334, 1292139693781155850),
+    "Expert List": (1070699307432427550, 1292139490445492324),
+}
 
 # Will have access to the commands in bot/cogs/OwnerCog.py
 CO_OWNER_IDS: list[int] = [

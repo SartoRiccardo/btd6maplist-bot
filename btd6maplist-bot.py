@@ -28,6 +28,12 @@ class MaplistBot(commands.Bot):
         self.last_restart = datetime.now()
         self.synced_tree = None
 
+    async def fetch_channel(self, channel_id: int, /):
+        channel = self.get_channel(channel_id)
+        if channel is not None:
+            return channel
+        return await super().fetch_channel(channel_id)
+
     async def setup_hook(self):
         cogs = [
             "OwnerCog",
@@ -36,6 +42,7 @@ class MaplistBot(commands.Bot):
             "LeaderboardCog",
             "UserCog",
             "SubmissionCog",
+            "AdminUtilsCog",
         ]
         for cog in cogs:
             await self.load_extension(f"bot.cogs.{cog}")

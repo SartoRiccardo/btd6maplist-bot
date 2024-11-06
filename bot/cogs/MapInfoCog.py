@@ -20,6 +20,7 @@ from bot.utils.formulas import points
 from bot.utils.colors import EmbedColor
 from bot.utils.formulas import get_page_idxs
 from bot.utils.misc import image_formats
+from typing import get_args
 
 
 class MapInfoCog(CogBase):
@@ -94,7 +95,7 @@ class MapInfoCog(CogBase):
         items_page = 10
 
         await interaction.response.defer(ephemeral=hide)
-        labels = ["Casual Expert", "Medium Expert", "High Expert", "True Expert"]
+        labels = get_args(ExpertDifficulty)
         info = [
             (EmjIcons.casual, "casual", "Easy and enjoyable, yet not brainless maps. Expect a game where many towers "
                                         "are viable. Comparable difficulty to maps like Workshop and Muddy Puddles."),
@@ -106,6 +107,8 @@ class MapInfoCog(CogBase):
             (EmjIcons.true, "true", "_If you're asking for one of the best, you'd better be one of the best._ Many "
                                     "strategies will not work. Comparable to, or even greater difficulty than maps "
                                     "like Bloody Puddles and Ouch."),
+            (EmjIcons.extreme, "extreme", "The absolute hardest the community has to offer. Many strategies are "
+                                          "forced, don't hesitate to go all out to beat these maps. _Good luck..._"),
         ]
         diffval = labels.index(difficulty)
         experts = await get_experts()
@@ -257,9 +260,10 @@ class MapInfoCog(CogBase):
 
         diff_parts = []
         if map_data["difficulty"] != -1:
-            diff_str = ["Casual", "Medium", "High", "True"][map_data["difficulty"]]
+            difficulties = get_args(ExpertDifficulty)
+            diff_str = difficulties[map_data["difficulty"]]
             diff_parts.append(
-                f"{EmjIcons.diff_by_index(map_data['difficulty'])} {diff_str} Expert"
+                f"{EmjIcons.diff_by_index(map_data['difficulty'])} {diff_str}"
             )
         if map_data["placement_cur"] != -1 and map_data["placement_cur"] <= ml_config['map_count']:
             diff_parts.append(
@@ -312,11 +316,10 @@ class MapInfoCog(CogBase):
         if lcc_data is None:
             return MessageContent(content="-# No LCCs for this map!")
 
-        is_proof_image = lcc_data["lcc"]["proof"] and \
-            any([
-                lcc_data["lcc"]["proof"].endswith(f".{ext}")
-                for ext in image_formats
-            ])
+        image_proofs = [
+            proof_url for proof_url in lcc_data["subm_proof_img"]
+            if any(proof_url.endswith(f".{ext}") for ext in image_formats)
+        ]
 
         ply_list = lcc_data["users"][0]["name"] \
             if len(lcc_data["users"]) == 1 else \
@@ -330,25 +333,29 @@ class MapInfoCog(CogBase):
         ]
         medals_str = " ".join([mdl for mdl in medals if mdl is not None])
 
+        map_url = f"{WEB_BASE_URL}/map/{map_data['code']}"
         embed = discord.Embed(
             color=EMBED_CLR,
             title="Least Cash CHIMPS",
             description=f"{format_emj} / {medals_str}\n"
                         f"Saveup: {EmjMisc.cash} **{lcc_data['lcc']['leftover']:,}**",
-            url=None if is_proof_image else lcc_data["lcc"]["proof"],
+            url=map_url,
         )
-        embed.set_author(
-            name=map_data["name"],
-            url=f"{WEB_BASE_URL}/map/{map_data['code']}",
-        )
-        if is_proof_image:
-            embed.set_image(url=lcc_data["lcc"]["proof"])
+        embed.set_author(name=map_data["name"])
+        if len(image_proofs):
+            embed.set_image(url=image_proofs[0])
         embed.add_field(
             name="Player" + ("s" if len(lcc_data["users"]) > 1 else ""),
             value=ply_list,
         )
 
-        return MessageContent(embeds=[embed])
+        embeds = [embed]
+        for proof_url in image_proofs[1:4]:
+            embed = discord.Embed(url=map_url)
+            embed.set_image(url=proof_url)
+            embeds.append(embed)
+
+        return MessageContent(embeds=embeds)
 
     @staticmethod
     def get_r6start_message(

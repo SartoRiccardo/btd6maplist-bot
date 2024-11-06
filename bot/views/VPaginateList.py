@@ -3,7 +3,7 @@ from .components import OwnerButton
 from .modals import MSelectPage
 from bot.types import RequestPagesCb, PageContentBuilderCb
 from bot.utils.formulas import get_page_idxs
-from bot.utils.discord import composite_views
+from bot.utils.discordutils import composite_views
 from typing import Any
 
 
