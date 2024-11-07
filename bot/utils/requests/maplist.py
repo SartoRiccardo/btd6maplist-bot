@@ -260,7 +260,7 @@ async def accept_run(who: discord.User, run_id: int) -> None:
     signature = sign(f"{run_id}{data_str}".encode())
 
     payload = {"data": data_str, "signature": signature}
-    async with http.client.post(f"{API_BASE_URL}/completions/{run_id}/accept/bot", json=payload) as resp:
+    async with http.client.put(f"{API_BASE_URL}/completions/{run_id}/accept/bot", json=payload) as resp:
         if resp.status == 400:
             raise BadRequest(await resp.json())
         elif resp.status == 404:
