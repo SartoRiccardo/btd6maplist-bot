@@ -244,8 +244,12 @@ class SubmissionCog(CogBase):
         # Note: this is an API call to the backend, it can only stay
         # within the 3-second Discord threshold because it's local, otherwise
         # it probably has to defer. But if it does, it can't show the modal.
-        ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
-        if not ml_user["has_seen_popup"]:
+        try:
+            ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
+        except MaplistResNotFound:
+            ml_user = None
+
+        if ml_user is None or not ml_user["has_seen_popup"]:
             return await interaction.response.send_message(
                 ephemeral=True,
                 content=rules_msg,
@@ -284,7 +288,7 @@ class SubmissionCog(CogBase):
             ephemeral=True,
             thinking=True,
         )
-        map_code = map_code.upper()
+        map_code = map_code.upper().strip()
         mtype = "list" if proposed.split(" / ")[0] == "Maplist" else "experts"
 
         try:
