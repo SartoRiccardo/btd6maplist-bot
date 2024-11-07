@@ -87,16 +87,18 @@ async def get_maplist_config() -> dict:
 
 async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> dict:
     fmt = {
-        "Current Version": "current",
-        "All Versions": "all",
-        "Expert List": "experts",
+        "Maplist": "1",
+        # "Maplist ~ All Versions": "2",
+        "Expert List": "51",
     }.get(game_format, "current")
     value = {
         "Points": "points",
         "LCCs": "lccs",
+        "No Optimal Hero": "no_geraldo",
+        "Black Border": "black_border",
     }.get(lb_type, "points")
 
-    qstring = f"value={value}&version={fmt}&page={page}"
+    qstring = f"value={value}&format={fmt}&page={page}"
     async with http.client.get(f"{API_BASE_URL}/maps/leaderboard?{qstring}") as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
