@@ -41,7 +41,7 @@ class LeaderboardCog(CogBase):
             self,
             interaction: discord.Interaction,
             page: int = 1,
-            game_format: Format = "Current Version",
+            game_format: Format = "Maplist",
             lb_type: LbType = "Points",
             hide: bool = False,
     ):

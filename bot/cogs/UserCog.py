@@ -198,20 +198,31 @@ class UserCog(CogBase):
 
         embed.set_thumbnail(url=profile["avatarURL"] if profile["avatarURL"] else empty_profile["avatarURL"])
 
-        if profile["maplist"]["current"]["points"]:  # Copy for allvers
-            something = True
-            prf = profile["maplist"]["current"]
-            description = f'- {int(prf["points"]) if prf["points"].is_integer() else prf["points"]}pt ' + \
-                          placements_emojis.get(prf["pts_placement"], f'(#{prf["pts_placement"]})')
-            if prf["lccs"]:
-                description += f'\n- {int(prf["lccs"]) if prf["lccs"].is_integer() else prf["lccs"]} LCCs ' + \
-                               placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
+        profiles = [
+            ("current", f"{EmjIcons.curver} Maplist Stats"),
+            ("experts", f"{EmjIcons.experts} Expert List Stats"),
+        ]
 
-            embed.add_field(
-                name=f"{EmjIcons.curver} Maplist Stats",
-                value=description,
-                inline=True,
-            )
+        for key, title in profiles:
+            if profile["maplist"][key]["points"]:
+                something = True
+                prf = profile["maplist"][key]
+                description = f'**Score:** {int(prf["points"]) if prf["points"].is_integer() else prf["points"]}pt ' + \
+                              placements_emojis.get(prf["pts_placement"], f'(#{prf["pts_placement"]})')
+                if prf["lccs"]:
+                    amount = int(prf["lccs"]) if prf["lccs"].is_integer() else prf["lccs"]
+                    description += f'\n- {EmjMedals.lcc} {amount} LCCs ' + \
+                                   placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
+                if prf["no_geraldo"]:
+                    amount = int(prf["no_geraldo"]) if prf["lccs"].is_integer() else prf["no_geraldo"]
+                    description += f'\n- {EmjMedals.no_opt_hero} {amount} No Optimal Hero runs ' + \
+                                   placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
+                if prf["black_border"]:
+                    amount = int(prf["black_border"]) if prf["lccs"].is_integer() else prf["black_border"]
+                    description += f'\n- {EmjMedals.bb} {amount} Black Border runs ' + \
+                                   placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
+
+                embed.add_field(name=title, value=description, inline=True)
 
         if user.id == interaction.user.id and profile["avatarURL"] is None:
             embed.set_footer(
