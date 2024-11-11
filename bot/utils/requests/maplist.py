@@ -135,7 +135,7 @@ async def submit_map(
         proposed_diff: int,
 ) -> None:
     data = {
-        "submitter": {
+        "user": {
             "id": user.id,
             "username": user.name,
             "avatar_url": user.avatar.url,
@@ -178,7 +178,7 @@ async def submit_run(
         run_format: int,
 ) -> None:
     data = {
-        "submitter": {
+        "user": {
             "id": user.id,
             "username": user.name,
             "avatar_url": user.display_avatar.url,
