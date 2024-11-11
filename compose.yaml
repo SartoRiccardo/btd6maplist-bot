@@ -2,3 +2,5 @@ services:
   btd6maplist_bot:
     build:
       context: .
+    volumes:
+      - ./data:/appuser/data

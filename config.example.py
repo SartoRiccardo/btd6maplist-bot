@@ -1,3 +1,5 @@
+import os.path
+
 TOKEN = "bot-token-here"
 APP_ID = "app-id-here"
 PRIVKEY_PATH = "btd6maplist-bot.pem"
@@ -9,7 +11,8 @@ WEB_BASE_URL = "http://localhost:3000"
 # Discord doesn't embed URLs with a file extension, and NK's map preview urls don't have one. Proxy it somehow.
 NK_PREVIEW_PROXY = lambda code: f"http://localhost:5000/map/{code}.jpg"
 
-DATA_PATH = "data"  # Path to store non-volatile data such as cog states
+# Path to store non-volatile data such as cog states
+PERSISTENT_DATA_PATH = os.path.join(os.path.expanduser("~"), "data")
 
 BOT_NAME = "Boilerplate bot"
 GH_REPO = "https://github.com/SartoRiccardo/discord-bot-boilerplate"
