@@ -1,5 +1,16 @@
 
 
+def stringify_errors(errors: dict[str, str]) -> str:
+    str_errors = []
+    for key in errors:
+        err = ""
+        if len(key):
+            err += f"- `{key}`: "
+        err += errors[key]
+        str_errors.append(err)
+    return "\n".join(str_errors)
+
+
 class MaplistResNotFound(Exception):
     def __init__(self, resource_name: str):
         super().__init__()
@@ -10,12 +21,20 @@ class MaplistResNotFound(Exception):
 
 
 class ErrorStatusCode(Exception):
-    def __init__(self, status_code: int):
+    codes_to_str = {
+        403: "You don't have the permissions to do this!",
+    }
+
+    def __init__(self, status_code: int, errors: dict[str, str] = None):
         super().__init__()
         self.status_code = status_code
+        self.errors = errors
 
     def formatted_exc(self) -> str:
-        return f"`[{self.status_code}]` Something weird happened!"
+        error = f"`[{self.status_code}]` Something weird happened!"
+        if self.errors:
+            error = ErrorStatusCode.codes_to_str.get(self.status_code, "") + "\n" + stringify_errors(self.errors)
+        return error
 
 
 class BadRequest(Exception):
@@ -24,11 +43,4 @@ class BadRequest(Exception):
         self.errors = resp_json["errors"]
 
     def formatted_exc(self) -> str:
-        errors = []
-        for key in self.errors:
-            err = "- "
-            if len(key):
-                err += f"`{key}`: "
-            err += self.errors[key]
-            errors.append(err)
-        return "\n".join(errors)
+        return stringify_errors(self.errors)

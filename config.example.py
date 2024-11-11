@@ -19,8 +19,6 @@ MAPLIST_ROLES: dict[str, list[int]] = {
     "admin": [],
     "expert_mod": [],
     "list_mod": [],
-    "banned": [],
-    "needs_rec": [],
 }
 WH_RUN_SUBMISSION_IDS: dict[str, list[int]] = {
     "expert": [],

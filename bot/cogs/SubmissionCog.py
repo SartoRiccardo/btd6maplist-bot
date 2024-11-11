@@ -21,7 +21,6 @@ from config import (
     MAPLIST_GID,
     WH_RUN_SUBMISSION_IDS,
     WH_MAP_SUBMISSION_IDS,
-    MAPLIST_ROLES,
     WEB_BASE_URL,
 )
 from bot.utils.misc import image_formats
@@ -52,30 +51,6 @@ async def check_submission(interaction: discord.Interaction, message: discord.Me
             ephemeral=True,
         )
     run_id = int(run_match.group(1))
-
-    subm_type = None
-    for key in WH_RUN_SUBMISSION_IDS:
-        if message.webhook_id in WH_RUN_SUBMISSION_IDS[key]:
-            subm_type = key
-            break
-
-    if subm_type is None:
-        return await interaction.response.send_message(
-            content="That's not a submission?",
-            ephemeral=True,
-        )
-
-    has_perms = False
-    for rl in interaction.user.roles:
-        if rl.id in (MAPLIST_ROLES["admin"] + MAPLIST_ROLES[f"{subm_type}_mod"]):
-            has_perms = True
-            break
-    if not has_perms:
-        return await interaction.response.send_message(
-            content=f"You are not a {subm_type} mod",
-            ephemeral=True,
-        )
-
     return run_id
 
 
@@ -96,10 +71,6 @@ async def ctxm_accept_submission(interaction: discord.Interaction, message: disc
     except MaplistResNotFound:
         response = "Couldn't find that completion!\n" \
                    "-# Maybe it was rejected?"
-    except ErrorStatusCode as exc:
-        if exc.status_code != 401:
-            raise exc
-        response = "Can't accept your own submission!"
     await interaction.edit_original_response(content=response)
 
 ctxm_accept_submission.error(handle_error)
@@ -249,6 +220,12 @@ class SubmissionCog(CogBase):
         except MaplistResNotFound:
             ml_user = None
 
+        if ml_user is not None and any(r["cannot_submit"] for r in ml_user["roles"]):
+            return await interaction.response.send_message(
+                content="You are banned from submitting...",
+                ephemeral=True,
+            )
+
         if ml_user is None or not ml_user["has_seen_popup"]:
             return await interaction.response.send_message(
                 ephemeral=True,
@@ -266,13 +243,6 @@ class SubmissionCog(CogBase):
             notes: str,
             proposed: MapPlacement,
     ):
-        for rl in interaction.user.roles:
-            if rl.id in MAPLIST_ROLES["banned"]:
-                return await interaction.response.send_message(
-                    content="You are banned from submitting...",
-                    ephemeral=True,
-                )
-
         options = get_args(MapPlacement)
         proposed_idxs = {
             "list": [],
@@ -403,17 +373,23 @@ class SubmissionCog(CogBase):
                 leftover,
             )
 
-        modal = MRunSubmission(
-            process_callback,
-            is_lcc=lcc,
-            req_video=lcc or no_optimal_hero or black_border or
-                      any([role.id in MAPLIST_ROLES["needs_rec"] for role in interaction.user.roles]),
-        )
-
         try:
             ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
         except MaplistResNotFound:
             ml_user = None
+
+        if ml_user is not None and any(r["cannot_submit"] for r in ml_user["roles"]):
+            return await interaction.response.send_message(
+                content="You are banned from submitting...",
+                ephemeral=True,
+            )
+
+        modal = MRunSubmission(
+            process_callback,
+            is_lcc=lcc,
+            req_video=lcc or no_optimal_hero or black_border or
+                ml_user is not None and any(r["requires_recording"] for r in ml_user["roles"]),
+        )
 
         if ml_user is None or not ml_user["has_seen_popup"]:
             return await interaction.response.send_message(
@@ -436,13 +412,6 @@ class SubmissionCog(CogBase):
             vproof_url: list[str],
             leftover: int | None,
     ):
-        for rl in interaction.user.roles:
-            if rl.id in MAPLIST_ROLES["banned"]:
-                return await interaction.response.send_message(
-                    content="You are banned from submitting...",
-                    ephemeral=True,
-                )
-
         await interaction.response.defer(thinking=True, ephemeral=True)
 
         map_id = map_id.upper()

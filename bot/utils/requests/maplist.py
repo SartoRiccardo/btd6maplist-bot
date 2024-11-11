@@ -1,5 +1,7 @@
 import io
 import os
+
+import aiohttp.hdrs
 import discord
 import bot.utils.http
 from config import API_BASE_URL, API_BASE_PUBLIC_URL, DATA_PATH
@@ -266,7 +268,11 @@ async def accept_run(who: discord.User, run_id: int) -> None:
         elif resp.status == 404:
             raise MaplistResNotFound("completion")
         if not resp.ok:
-            raise ErrorStatusCode(resp.status)
+            errors = None
+            if "application/json" in resp.headers.get(aiohttp.hdrs.CONTENT_TYPE) and \
+                    "errors" in (resp_data := await resp.json()):
+                errors = resp_data["errors"]
+            raise ErrorStatusCode(resp.status, errors=errors)
 
 
 async def reject_run(who: discord.User, run_id: int) -> None:
@@ -287,7 +293,11 @@ async def reject_run(who: discord.User, run_id: int) -> None:
         elif resp.status == 404:
             raise MaplistResNotFound("completion")
         if not resp.ok:
-            raise ErrorStatusCode(resp.status)
+            errors = None
+            if "application/json" in resp.headers.get(aiohttp.hdrs.CONTENT_TYPE) and \
+                    "errors" in (resp_data := await resp.json()):
+                errors = resp_data["errors"]
+            raise ErrorStatusCode(resp.status, errors=errors)
 
 
 def get_banner_medals_url(banner_url: str, medals: dict) -> str:
@@ -313,4 +323,8 @@ async def reject_map(who: discord.User, code: str) -> None:
         elif resp.status == 404:
             raise MaplistResNotFound("map submission")
         if not resp.ok:
-            raise ErrorStatusCode(resp.status)
+            errors = None
+            if "application/json" in resp.headers.get(aiohttp.hdrs.CONTENT_TYPE) and \
+                    "errors" in (resp_data := await resp.json()):
+                errors = resp_data["errors"]
+            raise ErrorStatusCode(resp.status, errors=errors)
