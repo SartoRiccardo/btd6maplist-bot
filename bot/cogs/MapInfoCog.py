@@ -8,6 +8,7 @@ from bot.utils.requests.maplist import (
     get_maplist_config,
     get_experts,
     get_maplist,
+    search_maps,
 )
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
@@ -77,6 +78,15 @@ class MapInfoCog(CogBase):
     ) -> None:
         await interaction.response.defer(ephemeral=hide)
         await self.send_map_info_messages(interaction, map_id, 2)
+
+    @cmd_map.autocomplete("map_id")
+    @cmd_lcc.autocomplete("map_id")
+    @cmd_r6_start.autocomplete("map_id")
+    async def autocomplete_map_id(self, _i: discord.Interaction, current: str) -> list[discord.app_commands.Choice[str]]:
+        return [
+            discord.app_commands.Choice(name=map_data["name"], value=map_data["code"])
+            for map_data in await search_maps(current)
+        ]
 
     @discord.app_commands.command(
         name="experts",

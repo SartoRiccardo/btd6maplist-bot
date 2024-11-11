@@ -12,6 +12,7 @@ from bot.utils.requests.maplist import (
     accept_run,
     reject_run,
     reject_map,
+    search_maps,
 )
 from bot.views import VRulesAccept
 from bot.views.modals import MMapSubmission, MRunSubmission
@@ -339,6 +340,14 @@ class SubmissionCog(CogBase):
             black_border,
             True,
         )
+
+    @cmd_submit_run.autocomplete("map_id")
+    @cmd_submit_lcc.autocomplete("map_id")
+    async def autocomplete_map_id(self, _i: discord.Interaction, current: str) -> list[discord.app_commands.Choice[str]]:
+        return [
+            discord.app_commands.Choice(name=map_data["name"], value=map_data["code"])
+            for map_data in await search_maps(current)
+        ]
 
     async def submit_run(
             self,

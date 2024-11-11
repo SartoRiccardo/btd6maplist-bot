@@ -328,3 +328,11 @@ async def reject_map(who: discord.User, code: str) -> None:
                     "errors" in (resp_data := await resp.json()):
                 errors = resp_data["errors"]
             raise ErrorStatusCode(resp.status, errors=errors)
+
+
+async def search_maps(query: str) -> list[dict]:
+    qparams = {"q": query, "type": "map"}
+    async with http.client.get(f"{API_BASE_URL}/search?{urllib.parse.urlencode(qparams)}") as resp:
+        if resp.ok:
+            return [result["data"] for result in await resp.json()]
+        return []
