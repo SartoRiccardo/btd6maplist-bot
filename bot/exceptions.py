@@ -23,6 +23,7 @@ class MaplistResNotFound(Exception):
 class ErrorStatusCode(Exception):
     codes_to_str = {
         403: "You don't have the permissions to do this!",
+        500: "Internal Server Error - Please take a screenshot & ping the bot owner, this is important!",
     }
 
     def __init__(self, status_code: int, errors: dict[str, str] = None):

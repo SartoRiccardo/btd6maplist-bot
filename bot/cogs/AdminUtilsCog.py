@@ -103,13 +103,13 @@ class AdminUtilsCog(CogBase):
             silent: bool = False,
     ) -> None:
         if game_format == "Maplist" and \
-                not roles_overlap(interaction.user, MAPLIST_ROLES["admin"] + MAPLIST_ROLES[f"list_mod"]):
+                not roles_overlap(interaction.user, MAPLIST_ROLES["admin"] + MAPLIST_ROLES["list_mod"]):
             return await interaction.response.send_message(
                 content="You are not a Maplist Moderator!",
                 ephemeral=True,
             )
         elif game_format == "Expert List" and \
-                not roles_overlap(interaction.user, MAPLIST_ROLES["admin"] + MAPLIST_ROLES[f"expert_mod"]):
+                not roles_overlap(interaction.user, MAPLIST_ROLES["admin"] + MAPLIST_ROLES["expert_mod"]):
             return await interaction.response.send_message(
                 content="You are not an Expert List Moderator!",
                 ephemeral=True,
