@@ -27,7 +27,6 @@ from config import (
 from bot.utils.misc import image_formats
 from typing import get_args
 
-
 list_rules_url = "https://discord.com/channels/1162188507800944761/1162193272320569485/1272011602228678747"
 exp_rules_url = "https://discord.com/channels/1162188507800944761/1250611476444479631/1253260417292308552"
 rules_msg = "Before you submit anything, remember that there are RULES for " \
@@ -73,6 +72,7 @@ async def ctxm_accept_submission(interaction: discord.Interaction, message: disc
         response = "Couldn't find that completion!\n" \
                    "-# Maybe it was rejected?"
     await interaction.edit_original_response(content=response)
+
 
 ctxm_accept_submission.error(handle_error)
 
@@ -133,6 +133,7 @@ async def ctxm_reject_submission(interaction: discord.Interaction, message: disc
         ephemeral=True,
     )
 
+
 ctxm_reject_submission.error(handle_error)
 
 
@@ -164,7 +165,7 @@ class SubmissionCog(CogBase):
 
     @staticmethod
     async def check_submission_proof(interaction: discord.Interaction, proof: discord.Attachment) -> bool:
-        if proof.size > 1024**2 * 3:
+        if proof.size > 1024 ** 2 * 3:
             await interaction.response.send_message(
                 content=f"❌ Image size must be up to 3MB",
                 ephemeral=True,
@@ -343,7 +344,8 @@ class SubmissionCog(CogBase):
 
     @cmd_submit_run.autocomplete("map_id")
     @cmd_submit_lcc.autocomplete("map_id")
-    async def autocomplete_map_id(self, _i: discord.Interaction, current: str) -> list[discord.app_commands.Choice[str]]:
+    async def autocomplete_map_id(self, _i: discord.Interaction, current: str) -> list[
+        discord.app_commands.Choice[str]]:
         return [
             discord.app_commands.Choice(name=map_data["name"], value=map_data["code"])
             for map_data in await search_maps(current)
@@ -364,6 +366,16 @@ class SubmissionCog(CogBase):
             if not check:
                 return
 
+        try:
+            map_id = map_id.upper()
+            ml_map = await get_maplist_map(map_id)
+        except MaplistResNotFound:
+            return await interaction.response.send_message(
+                content="That map doesn't exist!",
+                ephemeral=True,
+            )
+        run_format = 1 if ml_map["difficulty"] == -1 else 51
+
         async def process_callback(
                 interaction: discord.Interaction,
                 notes: str | None,
@@ -373,6 +385,7 @@ class SubmissionCog(CogBase):
             await self.process_run_submission(
                 interaction,
                 map_id,
+                run_format,
                 proofs,
                 no_optimal_hero,
                 black_border,
@@ -396,8 +409,12 @@ class SubmissionCog(CogBase):
         modal = MRunSubmission(
             process_callback,
             is_lcc=lcc,
-            req_video=lcc or no_optimal_hero or black_border or
-                ml_user is not None and any(r["requires_recording"] for r in ml_user["roles"]),
+            req_video=lcc or black_border or
+                      no_optimal_hero and (
+                              not (50 <= run_format < 100) or
+                              50 <= run_format < 100 and not (0 <= ml_map["difficulty"] <= 1)
+                      ) or
+                      ml_user is not None and any(r["requires_recording"] for r in ml_user["roles"]),
         )
 
         if ml_user is None or not ml_user["has_seen_popup"]:
@@ -413,6 +430,7 @@ class SubmissionCog(CogBase):
     async def process_run_submission(
             interaction: discord.Interaction,
             map_id: str,
+            run_format: int,
             proofs: list[discord.Attachment],
             no_optimal_hero: bool,
             black_border: bool,
@@ -422,10 +440,6 @@ class SubmissionCog(CogBase):
             leftover: int | None,
     ):
         await interaction.response.defer(thinking=True, ephemeral=True)
-
-        map_id = map_id.upper()
-        ml_map = await get_maplist_map(map_id)
-        run_format = 1 if ml_map["difficulty"] == -1 else 51
 
         try:
             await submit_run(
