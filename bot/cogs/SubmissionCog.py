@@ -412,7 +412,7 @@ class SubmissionCog(CogBase):
             req_video=lcc or black_border or
                       no_optimal_hero and (
                               not (50 <= run_format < 100) or
-                              50 <= run_format < 100 and not (0 <= ml_map["difficulty"] <= 1)
+                              50 <= run_format < 100 and not (0 <= ml_map["difficulty"] <= 2)
                       ) or
                       ml_user is not None and any(r["requires_recording"] for r in ml_user["roles"]),
         )
