@@ -336,3 +336,17 @@ async def search_maps(query: str) -> list[dict]:
         if resp.ok:
             return [result["data"] for result in await resp.json()]
         return []
+
+
+async def get_linked_role_updates() -> list[dict]:
+    qparams = {"signature": sign(b"")}
+    async with http.client.get(f"{API_BASE_URL}/roles/achievement/updates/bot?{urllib.parse.urlencode(qparams)}") as resp:
+        if not resp.ok:
+            return []
+        return await resp.json()
+
+
+async def confirm_linked_role_updates() -> None:
+    qparams = {"signature": sign(b"")}
+    async with http.client.post(f"{API_BASE_URL}/roles/achievement/updates/bot?{urllib.parse.urlencode(qparams)}") as resp:
+        pass

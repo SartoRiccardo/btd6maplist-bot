@@ -14,7 +14,7 @@ class MaplistBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
         # intents.message_content = True
-        # intents.members = True
+        intents.members = True
         super().__init__(
             command_prefix=commands.when_mentioned_or(",,,"),
             intents=intents,
@@ -43,6 +43,7 @@ class MaplistBot(commands.Bot):
             "UserCog",
             "SubmissionCog",
             "AdminUtilsCog",
+            "LinkedRolesCog",
         ]
         for cog in cogs:
             await self.load_extension(f"bot.cogs.{cog}")
@@ -72,6 +73,20 @@ class MaplistBot(commands.Bot):
             if not usr:
                 usr = await self.fetch_user(uid)
             return usr
+        except (discord.NotFound, discord.HTTPException):
+            return None
+
+    async def get_or_fetch_guild(self, gid: str | int) -> discord.Guild | None:
+        if isinstance(gid, str):
+            gid = int(gid)
+        if gid < 10000:
+            return None
+
+        try:
+            guild = self.get_guild(gid)
+            if not guild:
+                guild = await self.fetch_guild(gid)
+            return guild
         except (discord.NotFound, discord.HTTPException):
             return None
 
