@@ -17,14 +17,14 @@ from bot.utils.requests.maplist import (
 from bot.views import VRulesAccept
 from bot.views.modals import MMapSubmission, MRunSubmission
 from bot.types import MapPlacement
-from bot.exceptions import BadRequest, MaplistResNotFound, ErrorStatusCode
+from bot.exceptions import BadRequest, MaplistResNotFound
 from config import (
     MAPLIST_GID,
     WH_RUN_SUBMISSION_IDS,
     WH_MAP_SUBMISSION_IDS,
     WEB_BASE_URL,
 )
-from bot.utils.misc import image_formats
+from bot.utils.misc import image_formats, max_upload_size_mb
 from typing import get_args
 
 list_rules_url = "https://discord.com/channels/1162188507800944761/1162193272320569485/1272011602228678747"
@@ -165,9 +165,9 @@ class SubmissionCog(CogBase):
 
     @staticmethod
     async def check_submission_proof(interaction: discord.Interaction, proof: discord.Attachment) -> bool:
-        if proof.size > 1024 ** 2 * 3:
+        if proof.size > 1024 ** 2 * max_upload_size_mb:
             await interaction.response.send_message(
-                content=f"❌ Image size must be up to 3MB",
+                content=f"❌ Image size must be up to {max_upload_size_mb}MB",
                 ephemeral=True,
             )
             return False
@@ -290,7 +290,7 @@ class SubmissionCog(CogBase):
         proof_opt_3="proof_optional_3",
     )
     @discord.app_commands.describe(
-        proof="Image proof of you beating CHIMPS on the map (max 3MB)",
+        proof=f"Image proof of you beating CHIMPS on the map (max {max_upload_size_mb}MB)",
         proof_opt_1="An additional proof image you may want to provide.",
         proof_opt_2="An additional proof image you may want to provide.",
         proof_opt_3="An additional proof image you may want to provide.",
@@ -322,7 +322,7 @@ class SubmissionCog(CogBase):
         description="Submit a LCC on a map",
     )
     @discord.app_commands.describe(
-        proof="Image proof of you beating CHIMPS on the map (max 2MB)"
+        proof=f"Image proof of you beating CHIMPS on the map (max {max_upload_size_mb}MB)"
     )
     @autodoc
     async def cmd_submit_lcc(
