@@ -58,8 +58,12 @@ class AdminUtilsCog(CogBase):
             del self.votes_expire[msg_id]
 
     async def finalize_vote(self, channel_id: int, msg_id: int) -> None:
-        channel = await self.bot.fetch_channel(channel_id)
-        message = await channel.fetch_message(msg_id)
+        channel: discord.TextChannel = await self.bot.fetch_channel(channel_id)
+        try:
+            message = await channel.fetch_message(msg_id)
+        except (discord.NotFound, discord.Forbidden):
+            return
+        
         if len(message.embeds) == 0:
             return
 
