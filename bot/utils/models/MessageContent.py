@@ -6,11 +6,11 @@ class MessageContent:
             self,
             *,
             content: str | None = None,
-            embeds: list[discord.Embed] | None = None,
+            embeds: list[discord.Embed] | discord.Embed | None = None,
             view: discord.ui.View | None = None,
     ):
         self._content = content
-        self._embeds = embeds
+        self._embeds = embeds if isinstance(embeds, list) else [embeds]
         self._view = view
 
     async def content(self) -> str | None:

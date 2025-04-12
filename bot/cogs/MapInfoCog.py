@@ -9,19 +9,23 @@ from bot.utils.requests.maplist import (
     get_experts,
     get_maplist,
     search_maps,
+    get_botb,
+    get_nostalgia_pack,
 )
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
 from bot.utils.models import MessageContent, LazyMessageContent
 from bot.views import VPages, VPaginateList
 from config import WEB_BASE_URL, EMBED_CLR, NK_PREVIEW_PROXY
-from bot.types import ExpertDifficulty
+from bot.types import ExpertDifficulty, BotbDifficulty, NostalgiaPackGame
 from bot.utils.emojis import EmjHeros, EmjIcons, EmjMisc, EmjMedals
 from bot.utils.formulas import points
 from bot.utils.colors import EmbedColor
 from bot.utils.formulas import get_page_idxs
 from bot.utils.misc import image_formats
 from typing import get_args
+from collections.abc import Callable
+from bot.utils.discordutils import composite_views
 
 
 class MapInfoCog(CogBase):
@@ -31,7 +35,9 @@ class MapInfoCog(CogBase):
         "lcc": "Get the current LCC for a map.",
         "start": "Small guide on how to start on a map (if any)",
         "experts": "List of all expert maps, by difficulty.",
-        "maplist": "List all of the maps on the Maplist.",
+        "maplist": "List all of the maps in the Maplist.",
+        "best-of-the-best": "List all of the maps in the Best of the Best pack, by difficulty.",
+        "nostalgia-pack": "List all of the maps in the Nostalgia Pack, by game.",
     }
 
     def __init__(self, bot: commands.Bot) -> None:
@@ -102,8 +108,6 @@ class MapInfoCog(CogBase):
             difficulty: ExpertDifficulty,
             hide: bool = False,
     ) -> None:
-        items_page = 10
-
         await interaction.response.defer(ephemeral=hide)
         labels = get_args(ExpertDifficulty)
         info = [
@@ -122,7 +126,7 @@ class MapInfoCog(CogBase):
         ]
         diffval = labels.index(difficulty)
         experts = await get_experts()
-        experts = [exp for exp in experts if exp["difficulty"] == diffval]
+        experts = [exp for exp in experts if exp["format_idx"] == diffval]
 
         def create_message(entries: list[dict]) -> discord.Embed:
             content = "\n".join([
@@ -137,20 +141,10 @@ class MapInfoCog(CogBase):
                 url=f"{WEB_BASE_URL}/experts?difficulty={diffq}",
             )
 
-        paginate_view = VPaginateList(
+        await self.send_list(
             interaction,
-            math.ceil(len(experts) / items_page),
-            1,
-            {1: experts},
-            items_page,
-            len(experts),
-            None,
+            experts,
             create_message,
-            list_key=None,
-        )
-        await interaction.edit_original_response(
-            embed=create_message(paginate_view.get_needed_rows(1, {1: experts})),
-            view=paginate_view,
         )
 
     @discord.app_commands.command(
@@ -163,8 +157,6 @@ class MapInfoCog(CogBase):
             interaction: discord.Interaction,
             hide: bool = False,
     ) -> None:
-        items_page = 10
-
         await interaction.response.defer(ephemeral=hide)
         maplist, cfg = await asyncio.gather(
             get_maplist(),
@@ -173,7 +165,7 @@ class MapInfoCog(CogBase):
 
         def create_message(entries: list[dict]) -> discord.Embed:
             content = "\n".join([
-                f"`{'#'+str(mlmap['placement']): >3}` (`{points(mlmap['placement'], cfg): >3}pt`) ｌ "
+                f"`{'#'+str(mlmap['placement']): >3}` (`{points(mlmap['format_idx'], cfg): >3}pt`) ｌ "
                 f"`{mlmap['code']}` ｌ {mlmap['name']}"
                 for mlmap in entries
             ])
@@ -184,19 +176,189 @@ class MapInfoCog(CogBase):
                 url=f"{WEB_BASE_URL}/list",
             )
 
+        await self.send_list(
+            interaction,
+            maplist,
+            create_message,
+        )
+
+    @discord.app_commands.command(
+        name="best-of-the-best",
+        description="Get the Best of the Best pack",
+    )
+    @discord.app_commands.describe(
+        difficulty="The difficulty you want to search."
+    )
+    @autodoc
+    async def cmd_botb(
+            self,
+            interaction: discord.Interaction,
+            difficulty: BotbDifficulty,
+            hide: bool = False,
+    ) -> None:
+        await interaction.response.defer(ephemeral=hide)
+        labels = get_args(BotbDifficulty)
+        info = [
+            (EmjIcons.botb_beginner, "beginner",
+             "Simple, clean, and beautifully crafted — these maps are perfect for getting started or just enjoying the "
+             "art of great design."),
+            (EmjIcons.botb_intermediate, "intermediate",
+             "These maps introduce a bit more challenge, but nothing you haven’t handled before. The gameplay stays "
+             "fair and familiar, while the decoration steps things up with unique and polished visuals that bring "
+             "every map to life."),
+            (EmjIcons.botb_advanced, "advanced",
+             "While the visuals are still top-tier, the focus here shifts to serious gameplay."),
+            (EmjIcons.botb_expert, "expert",
+             "Beautiful and brutal. Maps marked with a flame are extreme, they might break within updates and are "
+             "sometimes featured in harder lists."),
+        ]
+        diffval = labels.index(difficulty)
+        if diffval != 3:
+            botb_list = await get_botb(diffval)
+        else:
+            expert, extreme = await asyncio.gather(
+                get_botb(3),
+                get_botb(4),
+            )
+            botb_list = [*expert, *extreme]
+
+        def create_message(entries: list[dict]) -> discord.Embed:
+            extr_emoji = f'  {EmjIcons.botb_extreme}'
+            content = "\n".join([
+                f"`{map_data['code']}` ｌ{extr_emoji if map_data['format_idx'] == 4 else ''} {map_data['name']}"
+                for map_data in entries
+            ])
+            icon, diffq, desc = info[diffval]
+            return discord.Embed(
+                title=f"{icon} {difficulty}s",
+                description=f"{desc}\n\n{content}",
+                color=EmbedColor.botb,
+                url=f"{WEB_BASE_URL}/best-of-the-best?difficulty={diffq}",
+            )
+
+        await self.send_list(
+            interaction,
+            botb_list,
+            create_message,
+        )
+
+    @discord.app_commands.command(
+        name="nostalgia-pack",
+        description="Get the Nostalgia Pack",
+    )
+    @discord.app_commands.describe(
+        game="The game you want to search for."
+    )
+    @autodoc
+    async def cmd_np(
+            self,
+            interaction: discord.Interaction,
+            game: NostalgiaPackGame,
+            hide: bool = False,
+    ) -> None:
+        items_page = 10
+
+        await interaction.response.defer(ephemeral=hide)
+        labels = get_args(NostalgiaPackGame)
+        info = [
+            (EmjIcons.np_btd123, "btd1_2_3"),
+            (EmjIcons.np_btd_console, "btd_ios_psn_dsi"),
+            (EmjIcons.np_btd4, "bloons_td_4"),
+            (EmjIcons.np_btd5, "bloons_td_5"),
+            (EmjIcons.np_btdb, "bloons_td_battles"),
+            (EmjIcons.np_bmc, "bloons_monkey_city"),
+            (EmjIcons.np_battd, "bloons_adventure_time_td"),
+            (EmjIcons.np_btdb2, "bloons_td_battles_2"),
+        ]
+        diffval = labels.index(game)
+        nostalgia_pack = await get_nostalgia_pack(diffval)
+
+        def create_message(entries: list[dict]) -> discord.Embed:
+            category = entries[0]["format_idx"]["category"]["name"]
+            content = "\n".join([
+                (
+                    f"`{map_data['code']}` ｌ {map_data['format_idx']['name']}"
+                    if map_data["code"] else
+                    f"`       ` ｌ ~~{map_data['format_idx']['name']}~~ {EmjIcons.np_missing}"
+                )
+                for map_data in entries
+            ])
+            icon, diffq = info[diffval]
+
+            category_q = category.lower().replace(" ", "_")
+            return discord.Embed(
+                title=f"{icon} {category}",
+                description=content,
+                color=EmbedColor.np,
+                url=f"{WEB_BASE_URL}/nostalgia-pack?game={diffq}&category={category_q}",
+            )
+
+        nostalgia_pack.sort(
+            key=lambda x: (x["format_idx"]["category"]["id"], x["format_idx"]["sort_order"])
+        )
+
+        maps_by_category = {}
+        for map_data in nostalgia_pack:
+            maps_by_category \
+                .setdefault(map_data["format_idx"]["category"]["name"], []) \
+                .append(map_data)
+
+        pages = []
+
+        view_tabs = VPages(
+            interaction,
+            pages,
+            placeholder=lambda page: pages[page][1],
+            autoload=False,
+        )
+
+        for category, maps in maps_by_category.items():
+            msg_content = MessageContent(
+                embeds=create_message(maps[:items_page]),
+                view=VPaginateList(
+                    interaction,
+                    math.ceil(len(maps) / items_page),
+                    1,
+                    {1: maps},
+                    items_page,
+                    len(maps),
+                    None,
+                    create_message,
+                    list_key=None,
+                    additional_views=[view_tabs],
+                ),
+            )
+            pages.append((None, category, msg_content))
+
+        view_tabs.load_items()
+        await interaction.edit_original_response(
+            embeds=await pages[0][2].embeds(),
+            view=composite_views(
+                await pages[0][2].view(),
+                view_tabs,
+            ),
+        )
+
+    @staticmethod
+    async def send_list(
+            interaction: discord.Interaction,
+            map_list: list[dict],
+            create_message: Callable[[list[dict]], discord.Embed],
+            items_page: int = 10,
+    ) -> None:
         paginate_view = VPaginateList(
             interaction,
-            math.ceil(len(maplist) / items_page),
+            math.ceil(len(map_list) / items_page),
             1,
-            {1: maplist},
+            {1: map_list},
             items_page,
-            len(maplist),
+            len(map_list),
             None,
             create_message,
             list_key=None,
         )
         await interaction.edit_original_response(
-            embed=create_message(paginate_view.get_needed_rows(1, {1: maplist})),
+            embed=create_message(paginate_view.get_needed_rows(1, {1: map_list})),
             view=paginate_view,
         )
 
@@ -269,17 +431,17 @@ class MapInfoCog(CogBase):
             description += f"-# Aliases: {' - '.join(map_data['aliases'])}\n"
 
         diff_parts = []
-        if map_data["difficulty"] != -1:
+        if map_data["difficulty"] is not None:
             difficulties = get_args(ExpertDifficulty)
             diff_str = difficulties[map_data["difficulty"]]
             diff_parts.append(
                 f"{EmjIcons.diff_by_index(map_data['difficulty'])} {diff_str}"
             )
-        if map_data["placement_cur"] != -1 and map_data["placement_cur"] <= ml_config['map_count']:
+        if map_data["placement_cur"] is not None and map_data["placement_cur"] <= ml_config['map_count']:
             diff_parts.append(
                 f"{EmjIcons.curver} #{map_data['placement_cur']} ({points(map_data['placement_cur'], ml_config)}pt)"
             )
-        # if map_data["placement_all"] != -1 and map_data["placement_all"] <= ml_config['map_count']:
+        # if map_data["placement_all"] is not None and map_data["placement_all"] <= ml_config['map_count']:
         #     diff_parts.append(
         #         f"{EmjIcons.allver} #{map_data['placement_all']} ({points(map_data['placement_cur'], ml_config)}pt)"
         #     )

@@ -2,6 +2,7 @@ import discord
 from bot.types import EmbedPage
 from .components import PageSelector
 from bot.utils.discordutils import composite_views
+from collections.abc import Callable
 
 
 class VPages(discord.ui.View):
@@ -11,7 +12,7 @@ class VPages(discord.ui.View):
             interaction: discord.Interaction,
             pages: list[EmbedPage],
             current_page: int = 0,
-            placeholder: str = "Other map info",
+            placeholder: str | Callable[[int], str] = "Other map info",
             timeout: float = None,
             autoload: bool = True,
     ):
@@ -24,12 +25,12 @@ class VPages(discord.ui.View):
         if autoload:
             self.load_items()
 
-    def load_items(self):
+    def load_items(self) -> None:
         self.add_item(PageSelector(
             self.pages,
             self.current_page,
             self.on_page_select,
-            placeholder=self.placeholder,
+            placeholder=self.placeholder if isinstance(self.placeholder, str) else self.placeholder(self.current_page),
             owner=self.og_interaction.user,
         ))
 
@@ -46,6 +47,7 @@ class VPages(discord.ui.View):
         updated_view = [VPages(
             self.og_interaction,
             self.pages,
+            placeholder=self.placeholder,
             current_page=page_idx,
             timeout=self.timeout,
         )]

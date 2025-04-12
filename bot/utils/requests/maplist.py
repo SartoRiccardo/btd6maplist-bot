@@ -65,12 +65,22 @@ async def get_maplist_map(map_id: str) -> dict:
 
 
 async def get_experts() -> list:
-    async with http.client.get(f"{API_BASE_URL}/exmaps") as resp:
+    async with http.client.get(f"{API_BASE_URL}/maps?format=51") as resp:
         return await resp.json()
 
 
 async def get_maplist() -> list:
-    async with http.client.get(f"{API_BASE_URL}/maps") as resp:
+    async with http.client.get(f"{API_BASE_URL}/maps?format=1") as resp:
+        return await resp.json()
+
+
+async def get_nostalgia_pack(game: int) -> list:
+    async with http.client.get(f"{API_BASE_URL}/maps?format=11&filter={game}") as resp:
+        return await resp.json()
+
+
+async def get_botb(difficulty: int) -> list:
+    async with http.client.get(f"{API_BASE_URL}/maps?format=52&filter={difficulty}") as resp:
         return await resp.json()
 
 
@@ -305,19 +315,20 @@ def get_banner_medals_url(banner_url: str, medals: dict) -> str:
     return f"{API_BASE_PUBLIC_URL}/img/medal-banner/{banner_name}?{urllib.parse.urlencode(medals)}"
 
 
-async def reject_map(who: discord.User, code: str) -> None:
+async def reject_map(who: discord.User, message_id: int) -> None:
     data = {
         "user": {
             "id": str(who.id),
             "username": who.name,
             "name": who.display_name,
         },
+        "message_id": str(message_id),
     }
     data_str = json.dumps(data)
-    signature = sign(f"{code}{data_str}".encode())
+    signature = sign(data_str.encode())
 
     payload = {"data": data_str, "signature": signature}
-    async with http.client.delete(f"{API_BASE_URL}/maps/submit/{code}/bot", json=payload) as resp:
+    async with http.client.delete(f"{API_BASE_URL}/maps/submit/bot", json=payload) as resp:
         if resp.status == 400:
             raise BadRequest(await resp.json())
         elif resp.status == 404:

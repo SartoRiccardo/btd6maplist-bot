@@ -374,7 +374,7 @@ class SubmissionCog(CogBase):
                 content="That map doesn't exist!",
                 ephemeral=True,
             )
-        run_format = 1 if ml_map["difficulty"] == -1 else 51
+        run_format = 1 if ml_map["difficulty"] is None else 51
 
         async def process_callback(
                 interaction: discord.Interaction,
