@@ -1,3 +1,5 @@
+import discord
+
 from .MessageContent import MessageContent
 from typing import Awaitable, Callable
 
@@ -20,10 +22,10 @@ class LazyMessageContent(MessageContent):
             await self._load()
         return self._content
 
-    async def embeds(self) -> str | None:
+    async def embeds(self) -> list[discord.Embed]:
         if not self._loaded:
             await self._load()
-        return self._embeds
+        return self._embeds if self._embeds else []
 
     async def view(self) -> str | None:
         if not self._loaded:

@@ -90,6 +90,11 @@ async def get_map_completions(map_code: str, page: int) -> list:
         return await resp.json()
 
 
+async def get_formats() -> list[dict]:
+    async with http.client.get(f"{API_BASE_URL}/formats") as resp:
+        return await resp.json()
+
+
 async def get_maplist_config() -> dict:
     async with http.client.get(f"{API_BASE_URL}/config") as resp:
         if not resp.ok:
