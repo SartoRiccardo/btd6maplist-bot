@@ -20,10 +20,7 @@ from bot.utils.requests.maplist import (
 from bot.views import VRulesAccept, VRunFormatSelect
 from bot.views.modals import MMapSubmission, MRunSubmission
 from bot.exceptions import BadRequest, MaplistResNotFound
-from config import (
-    MAPLIST_GID,
-    WEB_BASE_URL,
-)
+from config import WEB_BASE_URL
 from bot.utils.misc import image_formats, max_upload_size_mb
 from bot.utils.models import MessageContent
 from collections.abc import Awaitable
@@ -445,15 +442,20 @@ class SubmissionCog(CogBase):
             def callback_wrapper(*args) -> Awaitable[Any]:
                 return process_callback(*args, format_id=format_id)
 
+            permissions = set()
+            for perms in ml_user["permissions"]:
+                if perms["format"] is None or perms["format"] == format_id:
+                    permissions.update(perms["permissions"])
+
             return MRunSubmission(
                 callback_wrapper,
                 is_lcc=lcc,
                 req_video=lcc or black_border or
                     no_optimal_hero and (
-                        valid_formats[0]["id"] != 51 or
-                        valid_formats[0]["id"] == 51 and not (0 <= ml_map["difficulty"] <= 2)
+                        format_id == 1 or format_id == 2 or
+                        format_id == 51 and not (0 <= ml_map["difficulty"] <= 2)
                     ) or
-                    ml_user is not None and any("Recording" in r["name"] for r in ml_user["roles"])
+                    ml_user is not None and "require:completion_submission:recording" in permissions
             )
 
         try:
