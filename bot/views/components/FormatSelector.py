@@ -11,7 +11,7 @@ class FormatSelector(discord.ui.Select):
         self.formats = formats
         self.callback_func = callback_func
         options = [
-            discord.SelectOption(emoji=None, label=fmt["name"], value=str(fmt["id"]))
+            discord.SelectOption(emoji=fmt["emoji"], label=fmt["name"], value=str(fmt["id"]))
             for fmt in self.formats
         ]
 

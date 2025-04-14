@@ -14,9 +14,27 @@ class EmjIcons(BaseEmjClass):
     extreme = "🔥"
     packs = "📦"
 
+    botb_beginner = "<:icon_botb_1:1361394050602762310>"
+    botb_intermediate = "<:icon_botb_2:1361394005832630673>"
+    botb_advanced = "<:icon_botb_3:1361394035742347285>"
+    botb_expert = "<:icon_botb_4:1361393994143367461>"
+    botb_extreme = "🔥"
+
+    np_btd123 = "<:icon_np_1:1361394342157095293>"
+    np_btd_console = "<:icon_np_2:1361394359744069934>"
+    np_btd4 = "<:icon_np_3:1361394376491798528>"
+    np_btd5 = "<:icon_np_4:1361394391901671515>"
+    np_btdb = "<:icon_np_5:1361394411459707021>"
+    np_bmc = "<:icon_np_6:1361394429252075692>"
+    np_battd = "<:icon_np_7:1361394445148492019>"
+    np_btdb2 = "<:icon_np_8:1361394456292753449>"
+    np_missing = "❓"
+
     curver = "⏰"
     allver = "🕰️"
     experts = hard
+    botb_icon = "<:icon_botb:1361394250717073619>"
+    np = np_btd123
 
     @classmethod
     def diff_by_index(cls, idx: int) -> str:
