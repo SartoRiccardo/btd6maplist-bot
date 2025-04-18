@@ -8,6 +8,7 @@ from bot.utils.requests.maplist import (
     get_maplist_config,
     get_experts,
     get_maplist,
+    get_formats,
     search_maps,
     get_botb,
     get_nostalgia_pack,
@@ -368,10 +369,12 @@ class MapInfoCog(CogBase):
             map_id: str,
             idx: int
     ) -> None:
-        map_data, ml_config = await asyncio.gather(
+        map_data, ml_config, ml_formats = await asyncio.gather(
             get_maplist_map(map_id),
             get_maplist_config(),
+            get_formats(),
         )
+        visible_formats = [f["id"] for f in ml_formats if not f["hidden"]]
 
         if map_data["map_preview_url"].startswith("https://data.ninjakiwi.com"):
             map_data["map_preview_url"] = NK_PREVIEW_PROXY(map_data["code"])
@@ -388,7 +391,7 @@ class MapInfoCog(CogBase):
             ("🎯", "Round 6 Start"),
         ]
         page_contents = [
-            MapInfoCog.get_map_message(map_data, ml_config),
+            MapInfoCog.get_map_message(map_data, ml_config, visible_formats),
             MapInfoCog.get_lcc_message(map_data, max_lcc),
             MapInfoCog.get_r6start_message(map_data),
         ]
@@ -424,29 +427,44 @@ class MapInfoCog(CogBase):
     @staticmethod
     def get_map_message(
             map_data: dict,
-            ml_config: dict
+            ml_config: dict,
+            visible_formats: list[int],
     ) -> MessageContent:
         description = ""
         if len(map_data["aliases"]):
             description += f"-# Aliases: {' - '.join(map_data['aliases'])}\n"
 
         diff_parts = []
-        if map_data["difficulty"] is not None:
+        if map_data["placement_curver"] is not None and \
+                map_data["placement_curver"] <= ml_config['map_count']["value"] and \
+                1 in visible_formats:
+            diff_parts.append(
+                f"{EmjIcons.curver} #{map_data['placement_curver']} ({points(map_data['placement_curver'], ml_config)}pt)"
+            )
+        if map_data["placement_allver"] is not None and \
+                map_data["placement_allver"] <= ml_config['map_count']["value"] and \
+                2 in visible_formats:
+            diff_parts.append(
+                f"{EmjIcons.allver} #{map_data['placement_allver']} ({points(map_data['placement_allver'], ml_config)}pt)"
+            )
+        if map_data["difficulty"] is not None and 51 in visible_formats:
             difficulties = get_args(ExpertDifficulty)
             diff_str = difficulties[map_data["difficulty"]]
             diff_parts.append(
                 f"{EmjIcons.diff_by_index(map_data['difficulty'])} {diff_str}"
             )
-        if map_data["placement_cur"] is not None and map_data["placement_cur"] <= ml_config['map_count']:
+        if map_data["botb_difficulty"] is not None and 52 in visible_formats:
+            difficulties = list(get_args(BotbDifficulty)) + ["Expert"]
+            diff_str = difficulties[map_data["botb_difficulty"]]
             diff_parts.append(
-                f"{EmjIcons.curver} #{map_data['placement_cur']} ({points(map_data['placement_cur'], ml_config)}pt)"
+                f"{EmjIcons.botb_diff_by_index(map_data['botb_difficulty'])} {diff_str}"
             )
-        # if map_data["placement_all"] is not None and map_data["placement_all"] <= ml_config['map_count']:
-        #     diff_parts.append(
-        #         f"{EmjIcons.allver} #{map_data['placement_all']} ({points(map_data['placement_cur'], ml_config)}pt)"
-        #     )
+        if map_data["remake_of"] is not None and 11 in visible_formats:
+            diff_parts.append(
+                f"{EmjIcons.game(map_data['remake_of']['game']['id'])} {map_data['remake_of']['name']}"
+            )
         if len(diff_parts):
-            description += " / ".join(diff_parts) + "\n"
+            description += "".join([f"- {part}\n" for part in diff_parts])
 
         if len(map_data["optimal_heros"]):
             hero_emojis = [EmjHeros.get(hr) for hr in map_data["optimal_heros"]]
