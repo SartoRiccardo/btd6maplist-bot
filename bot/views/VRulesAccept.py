@@ -1,18 +1,19 @@
 import asyncio
 import discord
 from bot.utils.requests.maplist import read_rules
+from bot.utils.models.MessageContent import MessageContent
 
 
 class VRulesAccept(discord.ui.View):
-    """Paginates some information"""
+    """Prompts the user to accept the rules"""
     def __init__(
             self,
             interaction: discord.Interaction,
-            modal: discord.ui.Modal,
+            next_step: discord.ui.Modal | MessageContent,
             timeout: float = None,
     ):
         super().__init__(timeout=timeout)
-        self.modal = modal
+        self.next_step = next_step
         self.og_interaction = interaction
         self.read = False
 
@@ -30,7 +31,15 @@ class VRulesAccept(discord.ui.View):
     async def on_rules_read(self, interaction: discord.Interaction, _b: discord.ui.Button):
         self.read = True
         asyncio.create_task(read_rules(self.og_interaction.user))
+        response_coro = interaction.response.send_modal(self.next_step) \
+            if isinstance(self.next_step, discord.ui.Modal) else \
+            interaction.response.edit_original_response(
+                content=await self.next_step.content(),
+                embeds=await self.next_step.embeds(),
+                view=await self.next_step.view(),
+            )
+
         await asyncio.gather(
             self.delete_og_interaction(),
-            interaction.response.send_modal(self.modal),
+            response_coro,
         )

@@ -2,6 +2,8 @@
 class EmbedColor:
     experts = 0x5e35b1
     maplist = 0x00897b
+    botb = 0x29b6f6
+    np = 0x8d6e63
 
     pending = 0x1e88e5
     success = 0x43a047

@@ -1,5 +1,6 @@
 import re
 import discord
+import asyncio
 from discord.ext import commands
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
@@ -13,19 +14,18 @@ from bot.utils.requests.maplist import (
     reject_run,
     reject_map,
     search_maps,
+    get_formats,
+    get_retro_maps,
 )
-from bot.views import VRulesAccept
+from bot.views import VRulesAccept, VRunFormatSelect
 from bot.views.modals import MMapSubmission, MRunSubmission
-from bot.types import MapPlacement
 from bot.exceptions import BadRequest, MaplistResNotFound
-from config import (
-    MAPLIST_GID,
-    WH_RUN_SUBMISSION_IDS,
-    WH_MAP_SUBMISSION_IDS,
-    WEB_BASE_URL,
-)
+from config import WEB_BASE_URL
 from bot.utils.misc import image_formats, max_upload_size_mb
-from typing import get_args
+from bot.utils.models import MessageContent
+from collections.abc import Awaitable
+from typing import Any
+from difflib import SequenceMatcher
 
 list_rules_url = "https://discord.com/channels/1162188507800944761/1162193272320569485/1272011602228678747"
 exp_rules_url = "https://discord.com/channels/1162188507800944761/1250611476444479631/1253260417292308552"
@@ -36,7 +36,6 @@ rules_msg = "Before you submit anything, remember that there are RULES for " \
             f"submit something without reading them first, it might not be accepted!__**"
 
 
-@discord.app_commands.guilds(MAPLIST_GID)
 class SubmitGroup(discord.app_commands.Group):
     pass
 
@@ -55,7 +54,6 @@ async def check_submission(interaction: discord.Interaction, message: discord.Me
 
 
 @discord.app_commands.context_menu(name="Accept Completion")
-@discord.app_commands.guilds(MAPLIST_GID)
 async def ctxm_accept_submission(interaction: discord.Interaction, message: discord.Message):
     run_id = await check_submission(interaction, message)
     if not isinstance(run_id, int):
@@ -78,7 +76,6 @@ ctxm_accept_submission.error(handle_error)
 
 
 @discord.app_commands.context_menu(name="Reject Submission")
-@discord.app_commands.guilds(MAPLIST_GID)
 async def ctxm_reject_submission(interaction: discord.Interaction, message: discord.Message):
     async def reject_completion_submission():
         run_id = await check_submission(interaction, message)
@@ -106,27 +103,29 @@ async def ctxm_reject_submission(interaction: discord.Interaction, message: disc
                 content="That's not a submission?",
                 ephemeral=True,
             )
-        code = message.embeds[0].title.split(" - ")[-1]
 
         await interaction.response.defer(ephemeral=True)
         try:
-            await reject_map(interaction.user, code)
+            await reject_map(interaction.user, message.id)
             response = "✅ Rejected successfully!\n" \
                        f"If this was a mistake, you can simply insert the map manually."
         except BadRequest:
-            response = "That run was already accepted!\n" \
+            response = "That map was already accepted!\n" \
                        "-# If you wanted to delete it, do so on the website."
         except MaplistResNotFound:
-            response = "Couldn't find that completion!\n" \
+            response = "Couldn't find that map!\n" \
                        "-# Maybe it was rejected?"
         await interaction.edit_original_response(content=response)
 
     if message.webhook_id:
-        for key in WH_RUN_SUBMISSION_IDS:
-            if message.webhook_id in WH_MAP_SUBMISSION_IDS[key]:
-                return await reject_map_submission()
-            if message.webhook_id in WH_RUN_SUBMISSION_IDS[key]:
+        formats = await get_formats()
+        for format_data in formats:
+            if (match := re.match(r"https://discord.com/api/webhooks/(\d+)", format_data["run_submission_wh"])) and \
+                    int(match.group(1)) == message.webhook_id:
                 return await reject_completion_submission()
+            if (match := re.match(r"https://discord.com/api/webhooks/(\d+)", format_data["map_submission_wh"])) and \
+                    int(match.group(1)) == message.webhook_id:
+                return await reject_map_submission()
 
     return await interaction.response.send_message(
         content="That's not a submission?",
@@ -165,6 +164,9 @@ class SubmissionCog(CogBase):
 
     @staticmethod
     async def check_submission_proof(interaction: discord.Interaction, proof: discord.Attachment) -> bool:
+        if proof is None:
+            return True
+
         if proof.size > 1024 ** 2 * max_upload_size_mb:
             await interaction.response.send_message(
                 content=f"❌ Image size must be up to {max_upload_size_mb}MB",
@@ -181,27 +183,35 @@ class SubmissionCog(CogBase):
 
     @submit.command(
         name="map",
-        description="Submit a map to the Maplist.",
+        description="Submit a map to a list.",
     )
     @discord.app_commands.rename(
         map_code="code",
-        proposed="proposed_difficulty",
     )
     @discord.app_commands.describe(
         map_code="The BTD6 map's code",
         proof="Proof that you (or someone) beat CHIMPS on your map",
-        proposed="What would your map be?",
+        submit_as="What would your map be?",
     )
     async def cmd_submit_map(
             self,
             interaction: discord.Interaction,
             map_code: str,
-            proposed: MapPlacement,
-            proof: discord.Attachment,
+            submit_as: str,
+            proof: discord.Attachment = None,
     ):
         check = await self.check_submission_proof(interaction, proof)
         if not check:
             return
+
+        try:
+            format_id, proposed = [int(x) for x in submit_as.split(";")]
+        except ValueError:
+            return interaction.response.send_message(
+                content="Couldn't decide what you were submitting your map as!\n"
+                        "Try picking a value from the select options",
+                ephemeral=True,
+            )
 
         def process_callback(interaction: discord.Interaction, notes: str):
             return self.process_map_subm(
@@ -209,7 +219,8 @@ class SubmissionCog(CogBase):
                 map_code,
                 proof,
                 notes,
-                proposed
+                format_id,
+                proposed,
             )
 
         modal = MMapSubmission(process_callback)
@@ -222,10 +233,15 @@ class SubmissionCog(CogBase):
         except MaplistResNotFound:
             ml_user = None
 
-        if ml_user is not None and any(r["cannot_submit"] for r in ml_user["roles"]):
+        permissions = set()
+        for perms in ml_user["permissions"]:
+            if perms["format"] is None or perms["format"] == format_id:
+                permissions.update(perms["permissions"])
+
+        if ml_user is not None and "create:map_submission" not in permissions:
             return await interaction.response.send_message(
-                content="You are banned from submitting...",
                 ephemeral=True,
+                content="You cannot submit maps to this list!",
             )
 
         if ml_user is None or not ml_user["has_seen_popup"]:
@@ -235,6 +251,22 @@ class SubmissionCog(CogBase):
                 view=VRulesAccept(interaction, modal)
             )
 
+        formats = await get_formats()
+        for fmt in formats:
+            if fmt["id"] == format_id:
+                if fmt["map_submission_status"] == "open_chimps" and proof is None:
+                    return await interaction.response.send_message(
+                        ephemeral=True,
+                        content="⚠️ Map submissions in this list require a screenshot of someone beating CHIMPS mode "
+                                "in your map.\n\nSubmit the screenshot via the `proof` option when running this "
+                                "command!",
+                    )
+                if fmt["map_submission_status"] == "closed":
+                    return await interaction.response.send_message(
+                        ephemeral=True,
+                        content="This list is not currently accepting map submissions.",
+                    )
+
         await interaction.response.send_modal(modal)
 
     @staticmethod
@@ -243,25 +275,14 @@ class SubmissionCog(CogBase):
             map_code: str,
             proof: discord.Attachment,
             notes: str,
-            proposed: MapPlacement,
+            format_id: int,
+            proposed: int,
     ):
-        options = get_args(MapPlacement)
-        proposed_idxs = {
-            "list": [],
-            "experts": [],
-        }
-        for opt in options:
-            if opt.startswith("Maplist /"):
-                proposed_idxs["list"].append(opt)
-            else:
-                proposed_idxs["experts"].append(opt)
-
         await interaction.response.defer(
             ephemeral=True,
             thinking=True,
         )
         map_code = map_code.upper().strip()
-        mtype = "list" if proposed.split(" / ")[0] == "Maplist" else "experts"
 
         try:
             await submit_map(
@@ -269,8 +290,8 @@ class SubmissionCog(CogBase):
                 map_code,
                 notes,
                 proof,
-                mtype,
-                proposed_idxs[mtype].index(proposed),
+                format_id,
+                proposed,
             )
             await interaction.edit_original_response(
                 content="✅ Your map was submitted!",
@@ -336,7 +357,7 @@ class SubmissionCog(CogBase):
         await self.submit_run(
             interaction,
             map_id,
-            proof,
+            [proof],
             no_optimal_hero,
             black_border,
             True,
@@ -374,18 +395,40 @@ class SubmissionCog(CogBase):
                 content="That map doesn't exist!",
                 ephemeral=True,
             )
-        run_format = 1 if ml_map["difficulty"] == -1 else 51
+
+        format_keys = {
+            1: "placement_curver",
+            2: "placement_allver",
+            11: "remake_of",
+            51: "difficulty",
+            52: "botb_difficulty",
+        }
+
+        formats = await get_formats()
+        valid_formats = [
+            format_data for format_data in formats
+            if format_data["run_submission_status"] != "closed"
+                and not format_data["hidden"]
+                and ml_map[format_keys[format_data["id"]]] is not None
+        ]
+
+        if len(valid_formats) == 0:
+            return await interaction.response.send_message(
+                content="That map doesn't accept run submissions on any list it's on!",
+                ephemeral=True,
+            )
 
         async def process_callback(
                 interaction: discord.Interaction,
                 notes: str | None,
                 vproof_url: list[str] | None,
-                leftover: int | None
-        ):
+                leftover: int | None,
+                format_id: int = None,
+        ) -> None:
             await self.process_run_submission(
                 interaction,
                 map_id,
-                run_format,
+                format_id,
                 proofs,
                 no_optimal_hero,
                 black_border,
@@ -395,36 +438,56 @@ class SubmissionCog(CogBase):
                 leftover,
             )
 
+        def modal_builder(format_id: int) -> MRunSubmission:
+            def callback_wrapper(*args) -> Awaitable[Any]:
+                return process_callback(*args, format_id=format_id)
+
+            permissions = set()
+            for perms in ml_user["permissions"]:
+                if perms["format"] is None or perms["format"] == format_id:
+                    permissions.update(perms["permissions"])
+
+            return MRunSubmission(
+                callback_wrapper,
+                is_lcc=lcc,
+                req_video=lcc or black_border or
+                    no_optimal_hero and (
+                        format_id == 1 or format_id == 2 or
+                        format_id == 51 and not (0 <= ml_map["difficulty"] <= 2)
+                    ) or
+                    ml_user is not None and "require:completion_submission:recording" in permissions
+            )
+
         try:
             ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
         except MaplistResNotFound:
             ml_user = None
 
-        if ml_user is not None and any(r["cannot_submit"] for r in ml_user["roles"]):
-            return await interaction.response.send_message(
-                content="You are banned from submitting...",
-                ephemeral=True,
+        if len(valid_formats) == 1:
+            next_step = modal_builder(valid_formats[0]["id"])
+        else:
+            next_step = MessageContent(
+                content="This map belongs to multiple lists, which may have different rules for their completions.\n\n"
+                        "Please select which list you're submitting your run to.",
+                view=VRunFormatSelect(interaction, valid_formats, modal_builder),
             )
-
-        modal = MRunSubmission(
-            process_callback,
-            is_lcc=lcc,
-            req_video=lcc or black_border or
-                      no_optimal_hero and (
-                              not (50 <= run_format < 100) or
-                              50 <= run_format < 100 and not (0 <= ml_map["difficulty"] <= 2)
-                      ) or
-                      ml_user is not None and any(r["requires_recording"] for r in ml_user["roles"]),
-        )
 
         if ml_user is None or not ml_user["has_seen_popup"]:
             return await interaction.response.send_message(
                 ephemeral=True,
                 content=rules_msg,
-                view=VRulesAccept(interaction, modal)
+                view=VRulesAccept(interaction, next_step)
             )
 
-        await interaction.response.send_modal(modal)
+        if isinstance(next_step, discord.ui.Modal):
+            await interaction.response.send_modal(next_step)
+        elif isinstance(next_step, MessageContent):
+            await interaction.response.send_message(
+                ephemeral=True,
+                content=await next_step.content(),
+                embeds=await next_step.embeds(),
+                view=await next_step.view(),
+            )
 
     @staticmethod
     async def process_run_submission(
@@ -461,6 +524,32 @@ class SubmissionCog(CogBase):
             await interaction.edit_original_response(
                 content=f"❌ Something went wrong: \n{exc.formatted_exc()}",
             )
+
+    @cmd_submit_map.autocomplete("submit_as")
+    async def autoc_submit_map_submit_as(
+            self,
+            _interaction: discord.Interaction,
+            current: str,
+    ) -> list[discord.app_commands.Choice[str]]:
+        retro_maps, formats = await asyncio.gather(
+            get_retro_maps(),
+            get_formats(),
+        )
+
+        choices = [
+            (11, f"Nostalgia Pack / {map_data['name']}", map_data["id"])
+            for map_data in retro_maps
+        ]
+        for format_data in formats:
+            if format_data["proposed_difficulties"]:
+                for i, choice_name in enumerate(format_data["proposed_difficulties"]):
+                    choices.append((format_data["id"], f"{format_data['name']} ~ {choice_name}", i))
+
+        choices = [(*c, SequenceMatcher(None, c[1], current).ratio()) for c in choices]
+        return [
+            discord.app_commands.Choice(name=name, value=f"{format_id};{value}")
+            for format_id, name, value, score in sorted(choices, key=lambda x: x[-1], reverse=True)[:10]
+        ]
 
 
 async def setup(bot: commands.Bot) -> None:

@@ -65,18 +65,47 @@ async def get_maplist_map(map_id: str) -> dict:
 
 
 async def get_experts() -> list:
-    async with http.client.get(f"{API_BASE_URL}/exmaps") as resp:
+    async with http.client.get(f"{API_BASE_URL}/maps?format=51") as resp:
         return await resp.json()
 
 
 async def get_maplist() -> list:
-    async with http.client.get(f"{API_BASE_URL}/maps") as resp:
+    async with http.client.get(f"{API_BASE_URL}/maps?format=1") as resp:
         return await resp.json()
+
+
+async def get_nostalgia_pack(game: int) -> list:
+    async with http.client.get(f"{API_BASE_URL}/maps?format=11&filter={game}") as resp:
+        return await resp.json()
+
+
+async def get_botb(difficulty: int) -> list:
+    async with http.client.get(f"{API_BASE_URL}/maps?format=52&filter={difficulty}") as resp:
+        return await resp.json()
+
+
+async def get_retro_maps(as_list: bool = True) -> list:
+    async with http.client.get(f"{API_BASE_URL}/maps/retro") as resp:
+        maps = await resp.json()
+        if not as_list:
+            return maps
+        return [
+            {**map_data, "game": game}
+            for game in maps
+            for category in maps[game]
+            for map_data in maps[game][category]
+        ]
 
 
 async def get_map_completions(map_code: str, page: int) -> list:
     qparams = {page: page}
     async with http.client.get(f"{API_BASE_URL}/maps/{map_code}/completions?{urllib.parse.urlencode(qparams)}") as resp:
+        return await resp.json()
+
+
+async def get_formats() -> list[dict]:
+    qparams = {"signature": sign(b"")}
+    async with http.client.get(f"{API_BASE_URL}/formats/bot?{urllib.parse.urlencode(qparams)}") as resp:
         return await resp.json()
 
 
@@ -132,8 +161,8 @@ async def submit_map(
         user: discord.User,
         code: str,
         notes: str,
-        proof: discord.Attachment,
-        map_type: str,
+        proof: discord.Attachment | None,
+        map_type: int,
         proposed_diff: int,
 ) -> None:
     data = {
@@ -144,23 +173,32 @@ async def submit_map(
         },
         "code": code,
         "notes": notes,
-        "type": map_type,
+        "format": map_type,
         "proposed": proposed_diff,
     }
-    data_str = json.dumps(data)
-    proof_contents = await proof.read()
-    signature = sign(data_str.encode() + proof_contents)
 
-    form_data = FormData()
-    form_data.add_field(
-        "proof_completion",
-        io.BytesIO(proof_contents),
-        filename=proof.filename,
-        content_type=proof.content_type,
-    )
-    form_data.add_field("data", json.dumps({"data": data_str, "signature": signature}))
+    form_data = None
+    json_data = None
+    if proof is None:
+        json_data = {
+            "data": json.dumps(data),
+            "signature": sign(json.dumps(data).encode())
+        }
+    else:
+        data_str = json.dumps(data)
+        proof_contents = await proof.read()
+        signature = sign(data_str.encode() + proof_contents)
 
-    async with http.client.post(f"{API_BASE_URL}/maps/submit/bot", data=form_data) as resp:
+        form_data = FormData()
+        form_data.add_field(
+            "proof_completion",
+            io.BytesIO(proof_contents),
+            filename=proof.filename,
+            content_type=proof.content_type,
+        )
+        form_data.add_field("data", json.dumps({"data": data_str, "signature": signature}))
+
+    async with http.client.post(f"{API_BASE_URL}/maps/submit/bot", data=form_data, json=json_data) as resp:
         if resp.status == 400:
             raise BadRequest(await resp.json())
         if not resp.ok:
@@ -305,19 +343,20 @@ def get_banner_medals_url(banner_url: str, medals: dict) -> str:
     return f"{API_BASE_PUBLIC_URL}/img/medal-banner/{banner_name}?{urllib.parse.urlencode(medals)}"
 
 
-async def reject_map(who: discord.User, code: str) -> None:
+async def reject_map(who: discord.User, message_id: int) -> None:
     data = {
         "user": {
             "id": str(who.id),
             "username": who.name,
             "name": who.display_name,
         },
+        "message_id": str(message_id),
     }
     data_str = json.dumps(data)
-    signature = sign(f"{code}{data_str}".encode())
+    signature = sign(data_str.encode())
 
     payload = {"data": data_str, "signature": signature}
-    async with http.client.delete(f"{API_BASE_URL}/maps/submit/{code}/bot", json=payload) as resp:
+    async with http.client.delete(f"{API_BASE_URL}/maps/submit/bot", json=payload) as resp:
         if resp.status == 400:
             raise BadRequest(await resp.json())
         elif resp.status == 404:
