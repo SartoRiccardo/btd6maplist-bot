@@ -41,6 +41,15 @@ class EmjIcons(BaseEmjClass):
         return [cls.casual, cls.medium, cls.hard, cls.true, cls.extreme][idx]
 
     @classmethod
+    def botb_diff_by_index(cls, idx: int) -> str:
+        return [cls.botb_beginner, cls.botb_intermediate, cls.botb_advanced, cls.botb_expert, cls.botb_expert][idx]
+
+    @classmethod
+    def game(cls, idx: int) -> str:
+        return [cls.np_btd123, cls.np_btd_console, cls.np_btd4, cls.np_btd5, cls.np_btdb, cls.np_bmc, cls.np_battd,
+                cls.np_btdb2][idx]
+
+    @classmethod
     def format(cls, fmt: int) -> str | None:
         return ({
             1: cls.curver,

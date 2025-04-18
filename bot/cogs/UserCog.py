@@ -6,7 +6,13 @@ from discord.ext import commands
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
 from bot.utils.formulas import get_page_idxs
-from bot.utils.requests.maplist import get_maplist_user, get_user_completions, set_oak, get_banner_medals_url
+from bot.utils.requests.maplist import (
+    get_maplist_user,
+    get_user_completions,
+    set_oak,
+    get_formats,
+    get_banner_medals_url,
+)
 from bot.utils.requests.ninjakiwi import get_btd6_user
 from bot.views import VPages, VPaginateList
 from bot.utils.models import MessageContent, LazyMessageContent
@@ -16,10 +22,7 @@ from bot.utils.emojis import EmjMedals, EmjIcons, EmjPlacements, EmjMisc
 
 
 empty_profile = {
-    "maplist": {
-        "current": {"points": 0},
-        "all": {"points": 0},
-    },
+    "list_stats": [],
     "created_maps": [],
     "medals": {
         "wins": 0,
@@ -62,6 +65,13 @@ class UserCog(CogBase):
             )
         await self.send_user_profile(interaction, interaction.user if user is None else user, hide)
 
+    @staticmethod
+    async def fetch_user(user_id: int):
+        try:
+            return await get_maplist_user(user_id)
+        except MaplistResNotFound:
+            return empty_profile
+
     async def send_user_profile(
             self,
             interaction: discord.Interaction,
@@ -70,13 +80,13 @@ class UserCog(CogBase):
     ):
         await interaction.response.defer(ephemeral=hide)
 
-        try:
-            profile = await get_maplist_user(user.id)
-        except MaplistResNotFound:
-            profile = empty_profile
+        profile, formats = await asyncio.gather(
+            self.fetch_user(user.id),
+            get_formats(),
+        )
 
         pages = [
-            ("ℹ️", "User Overview", self.get_user_message(interaction, user, profile)),
+            ("ℹ️", "User Overview", self.get_user_message(interaction, user, profile, formats)),
         ]
 
         views_to_load = []
@@ -174,6 +184,7 @@ class UserCog(CogBase):
             interaction: discord.Interaction,
             user: discord.User,
             profile: dict,
+            formats: list[dict],
     ) -> MessageContent:
         description = ""
         if len(profile["created_maps"]):
@@ -198,31 +209,29 @@ class UserCog(CogBase):
 
         embed.set_thumbnail(url=profile["avatarURL"] if profile["avatarURL"] else empty_profile["avatarURL"])
 
-        profiles = [
-            ("current", f"{EmjIcons.curver} Maplist Stats"),
-            ("experts", f"{EmjIcons.experts} Expert List Stats"),
-        ]
+        for stats in sorted(profile["list_stats"], key=lambda x: x["format_id"]):
+            format_data = next(f for f in formats if f["id"] == stats["format_id"])
+            if format_data["hidden"]:
+                continue
 
-        for key, title in profiles:
-            if profile["maplist"][key]["points"]:
-                something = True
-                prf = profile["maplist"][key]
-                description = f'**Score:** {int(prf["points"]) if prf["points"].is_integer() else prf["points"]}pt ' + \
-                              placements_emojis.get(prf["pts_placement"], f'(#{prf["pts_placement"]})')
-                if prf["lccs"]:
-                    amount = int(prf["lccs"]) if prf["lccs"].is_integer() else prf["lccs"]
-                    description += f'\n- {EmjMedals.lcc} {amount} LCCs ' + \
-                                   placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
-                if prf["no_geraldo"]:
-                    amount = int(prf["no_geraldo"]) if prf["lccs"].is_integer() else prf["no_geraldo"]
-                    description += f'\n- {EmjMedals.no_opt_hero} {amount} No Optimal Hero runs ' + \
-                                   placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
-                if prf["black_border"]:
-                    amount = int(prf["black_border"]) if prf["lccs"].is_integer() else prf["black_border"]
-                    description += f'\n- {EmjMedals.bb} {amount} Black Border runs ' + \
-                                   placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
+            something = True
+            prf = stats["stats"]
+            description = f'**Score:** {int(prf["points"]) if prf["points"].is_integer() else prf["points"]}pt ' + \
+                          placements_emojis.get(prf["pts_placement"], f'(#{prf["pts_placement"]})')
+            if prf["lccs"]:
+                amount = int(prf["lccs"]) if prf["lccs"].is_integer() else prf["lccs"]
+                description += f'\n- {EmjMedals.lcc} {amount} LCCs ' + \
+                               placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
+            if prf["no_geraldo"]:
+                amount = int(prf["no_geraldo"]) if prf["lccs"].is_integer() else prf["no_geraldo"]
+                description += f'\n- {EmjMedals.no_opt_hero} {amount} No Optimal Hero runs ' + \
+                               placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
+            if prf["black_border"]:
+                amount = int(prf["black_border"]) if prf["lccs"].is_integer() else prf["black_border"]
+                description += f'\n- {EmjMedals.bb} {amount} Black Border runs ' + \
+                               placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
 
-                embed.add_field(name=title, value=description, inline=True)
+            embed.add_field(name=f"{format_data['emoji']} {format_data['name']} Stats", value=description, inline=True)
 
         if user.id == interaction.user.id and profile["avatarURL"] is None:
             embed.set_footer(
