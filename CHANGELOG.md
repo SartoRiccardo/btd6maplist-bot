@@ -1,5 +1,27 @@
 # Changelog
 
+## 2025-04-20 - 1.8.0
+
+### Added
+- Added `/best-of-the-best`, `/nostalgia-pack`
+- Added BotB + NP information in every map-related command
+
+### Changed
+- Submitting completions to a map with multiple formats now asks which one you're submitting to
+
+## 2025-02-27 - 1.7.1
+
+### Changed
+- File size increased to 5MB per image
+
+### Fixed
+- Bot actually removes Achivement Roles when it needs to
+
+## 2025-02-25 - 1.7.0
+
+### Added
+- Bot syncs Achievement Roles
+
 ## 2024-11-11 - 1.6.0
 
 ### Added
