@@ -120,10 +120,12 @@ async def ctxm_reject_submission(interaction: discord.Interaction, message: disc
     if message.webhook_id:
         formats = await get_formats()
         for format_data in formats:
-            if (match := re.match(r"https://discord.com/api/webhooks/(\d+)", format_data["run_submission_wh"])) and \
+            if format_data["run_submission_wh"] and \
+                    (match := re.match(r"https://discord.com/api/webhooks/(\d+)", format_data["run_submission_wh"])) and \
                     int(match.group(1)) == message.webhook_id:
                 return await reject_completion_submission()
-            if (match := re.match(r"https://discord.com/api/webhooks/(\d+)", format_data["map_submission_wh"])) and \
+            if format_data["map_submission_wh"] and \
+                    (match := re.match(r"https://discord.com/api/webhooks/(\d+)", format_data["map_submission_wh"])) and \
                     int(match.group(1)) == message.webhook_id:
                 return await reject_map_submission()
 
@@ -207,7 +209,7 @@ class SubmissionCog(CogBase):
         try:
             format_id, proposed = [int(x) for x in submit_as.split(";")]
         except ValueError:
-            return interaction.response.send_message(
+            return await interaction.response.send_message(
                 content="Couldn't decide what you were submitting your map as!\n"
                         "Try picking a value from the select options",
                 ephemeral=True,

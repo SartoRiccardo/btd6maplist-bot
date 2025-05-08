@@ -1,5 +1,11 @@
 # Changelog
 
+## 2025-05-08 - 1.8.1
+
+### Fixed
+- `TypeError` in rejecting a submission due to not checking if webhooks are not `None`
+- `await`ed a `Interaction.send_message`
+
 ## 2025-04-20 - 1.8.0
 
 ### Added
