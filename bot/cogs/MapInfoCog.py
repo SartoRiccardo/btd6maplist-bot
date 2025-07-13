@@ -166,7 +166,7 @@ class MapInfoCog(CogBase):
 
         def create_message(entries: list[dict]) -> discord.Embed:
             content = "\n".join([
-                f"`{'#'+str(mlmap['placement']): >3}` (`{points(mlmap['format_idx'], cfg): >3}pt`) ｌ "
+                f"`{'#'+str(mlmap['format_idx']): >3}` (`{points(mlmap['format_idx'], cfg): >3}pt`) ｌ "
                 f"`{mlmap['code']}` ｌ {mlmap['name']}"
                 for mlmap in entries
             ])
