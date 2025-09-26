@@ -74,6 +74,7 @@ class EmjHeros(BaseEmjClass):
     churchill = "🦸‍♂️"
     ben = "🦸‍♂️"
     ezili = "🦸‍♂️"
+    silas = "🦸‍♂️"
     pat = "🦸‍♂️"
     adora = "🦸‍♂️"
     brickell = "🦸‍♂️"
