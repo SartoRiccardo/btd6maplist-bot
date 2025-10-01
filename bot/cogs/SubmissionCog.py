@@ -235,16 +235,17 @@ class SubmissionCog(CogBase):
         except MaplistResNotFound:
             ml_user = None
 
-        permissions = set()
-        for perms in ml_user["permissions"]:
-            if perms["format"] is None or perms["format"] == format_id:
-                permissions.update(perms["permissions"])
+        if ml_user:
+            permissions = set()
+            for perms in ml_user["permissions"]:
+                if perms["format"] is None or perms["format"] == format_id:
+                    permissions.update(perms["permissions"])
 
-        if ml_user is not None and "create:map_submission" not in permissions:
-            return await interaction.response.send_message(
-                ephemeral=True,
-                content="You cannot submit maps to this list!",
-            )
+            if "create:map_submission" not in permissions:
+                return await interaction.response.send_message(
+                    ephemeral=True,
+                    content="You cannot submit maps to this list!",
+                )
 
         if ml_user is None or not ml_user["has_seen_popup"]:
             return await interaction.response.send_message(
@@ -445,9 +446,10 @@ class SubmissionCog(CogBase):
                 return process_callback(*args, format_id=format_id)
 
             permissions = set()
-            for perms in ml_user["permissions"]:
-                if perms["format"] is None or perms["format"] == format_id:
-                    permissions.update(perms["permissions"])
+            if ml_user:
+                for perms in ml_user["permissions"]:
+                    if perms["format"] is None or perms["format"] == format_id:
+                        permissions.update(perms["permissions"])
 
             return MRunSubmission(
                 callback_wrapper,
