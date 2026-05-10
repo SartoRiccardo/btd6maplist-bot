@@ -28,15 +28,28 @@ BOT_SECRET = os.environ["BOT_SECRET"].encode()
 os.makedirs(os.path.join(os.path.expanduser(os.environ.get("DATA_PATH", "~/data")), "tmp"), exist_ok=True)
 
 
-def hmac_headers(method: str, path: str, body: str) -> dict[str, str]:
+def hmac_headers(method: str, path: str, body: bytes | str = "", content_type: str | None = "application/json") -> dict[str, str]:
     timestamp = str(int(time.time()))
-    message = f"{timestamp}\n{method.upper()}\n{path}\n{body}".encode()
+    body_bytes = body if isinstance(body, bytes) else body.encode()
+    message = f"{timestamp}\n{method.upper()}\n{path}\n".encode() + body_bytes
     signature = hmac.new(BOT_SECRET, message, hashlib.sha256).hexdigest()
-    return {
-        "X-Timestamp": timestamp,
-        "X-Signature": signature,
-        "Content-Type": "application/json",
-    }
+    headers: dict[str, str] = {"X-Timestamp": timestamp, "X-Signature": signature}
+    if content_type:
+        headers["Content-Type"] = content_type
+    return headers
+
+
+class _BytesCapture:
+    """Minimal async stream writer that captures bytes for HMAC signing."""
+    def __init__(self) -> None:
+        self._buf = bytearray()
+
+    async def write(self, chunk: bytes) -> None:
+        self._buf.extend(chunk)
+
+    @property
+    def data(self) -> bytes:
+        return bytes(self._buf)
 
 
 # Signature methods & vulnerabilities: https://en.wikipedia.org/wiki/Digital_signature#Method
@@ -179,45 +192,37 @@ async def submit_map(
         user: discord.User,
         code: str,
         notes: str,
-        proof: discord.Attachment | None,
-        map_type: int,
+        proof: discord.Attachment,
+        format_id: int,
         proposed_diff: int,
 ) -> None:
-    data = {
-        "user": {
-            "id": user.id,
-            "username": user.name,
-            "avatar_url": user.avatar.url,
-        },
-        "code": code,
-        "notes": notes,
-        "format": map_type,
-        "proposed": proposed_diff,
-    }
+    path = "/bot/maps/submit"
+    proof_contents = await proof.read()
 
-    form_data = None
-    json_data = None
-    if proof is None:
-        json_data = {
-            "data": json.dumps(data),
-            "signature": sign(json.dumps(data).encode())
-        }
-    else:
-        data_str = json.dumps(data)
-        proof_contents = await proof.read()
-        signature = sign(data_str.encode() + proof_contents)
+    form_data = FormData()
+    form_data.add_field("_user", json.dumps({"discord_id": str(user.id), "name": user.name}))
+    form_data.add_field("code", code)
+    form_data.add_field("format_id", str(format_id))
+    form_data.add_field("proposed", str(proposed_diff))
+    if notes:
+        form_data.add_field("subm_notes", notes)
+    form_data.add_field(
+        "completion_proof",
+        io.BytesIO(proof_contents),
+        filename=proof.filename,
+        content_type=proof.content_type,
+    )
 
-        form_data = FormData()
-        form_data.add_field(
-            "proof_completion",
-            io.BytesIO(proof_contents),
-            filename=proof.filename,
-            content_type=proof.content_type,
-        )
-        form_data.add_field("data", json.dumps({"data": data_str, "signature": signature}))
+    writer = form_data()
+    buf = _BytesCapture()
+    await writer.write(buf)
+    body = buf.data
 
-    async with http.client.post(f"{API_BASE_URL}/maps/submit/bot", data=form_data, json=json_data) as resp:
-        if resp.status == 400:
+    headers = hmac_headers("POST", path, body, content_type=None)
+    headers["Content-Type"] = writer.content_type
+
+    async with http.client.post(f"{API_BASE_URL}{path}", data=body, headers=headers) as resp:
+        if resp.status == 422:
             raise BadRequest(await resp.json())
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
