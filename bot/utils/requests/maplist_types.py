@@ -1,4 +1,4 @@
-from typing import Any, Literal, TypedDict
+from typing import Literal, TypedDict
 
 
 # ---------------------------------------------------------------------------
@@ -244,37 +244,36 @@ class LeaderboardPage(TypedDict):
 # User profile  (get_maplist_user)
 # ---------------------------------------------------------------------------
 
-class UserStatDetails(TypedDict):
-    points: float
-    pts_placement: int
-    lccs: float
-    lccs_placement: int
-    no_geraldo: float
-    black_border: float
-
-
-class UserListStat(TypedDict):
-    format_id: int
-    stats: UserStatDetails
-
-
 class UserMedals(TypedDict):
     wins: int
+    black_border: int
+    no_geraldo: int
+    current_lcc: int
 
 
-class UserPermission(TypedDict):
-    format: int | None
-    permissions: list[str]
+class UserRankScore(TypedDict):
+    score: float
+    placement: int | None
+
+
+class UserRank(TypedDict):
+    format_id: int
+    points: UserRankScore | None   # null if user is not on this format's points LB
+    lccs: UserRankScore
+    no_geraldo: UserRankScore
+    black_border: UserRankScore
 
 
 class MaplistUser(TypedDict):
-    list_stats: list[UserListStat]
-    created_maps: list[Any]
-    medals: UserMedals
-    avatarURL: str | None
-    bannerURL: str | None
+    discord_id: str
+    name: str
+    is_banned: bool
     has_seen_popup: bool
-    permissions: list[UserPermission]
+    avatar_url: str | None         # include=flair
+    banner_url: str | None         # include=flair
+    medals: UserMedals             # include=medals
+    permissions: dict[str, list[int | None]]  # include=permissions; None = global
+    ranks: list[UserRank]          # include=ranks
 
 
 

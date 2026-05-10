@@ -23,13 +23,10 @@ from bot.utils.emojis import EmjMedals, EmjIcons, EmjPlacements, EmjMisc
 
 
 empty_profile = {
-    "list_stats": [],
-    "created_maps": [],
-    "medals": {
-        "wins": 0,
-    },
-    "avatarURL": "https://static-api.nkstatic.com/appdocs/4/assets/opendata/db32af61df5646951a18c60fe0013a31_ProfileAvatar01.png",
-    "bannerURL": "https://static-api.nkstatic.com/appdocs/4/assets/opendata/bbd8e1412f656b91db7df7aabbc1598b_TeamsBannerDeafult.png",
+    "ranks": [],
+    "medals": {"wins": 0, "black_border": 0, "no_geraldo": 0, "current_lcc": 0},
+    "avatar_url": "https://static-api.nkstatic.com/appdocs/4/assets/opendata/db32af61df5646951a18c60fe0013a31_ProfileAvatar01.png",
+    "banner_url": "https://static-api.nkstatic.com/appdocs/4/assets/opendata/bbd8e1412f656b91db7df7aabbc1598b_TeamsBannerDeafult.png",
 }
 placements_emojis = {
     1: EmjPlacements.top1,
@@ -188,8 +185,6 @@ class UserCog(CogBase):
             formats: list[dict],
     ) -> MessageContent:
         description = ""
-        if len(profile["created_maps"]):
-            description += f"- **Maps Created:** {len(profile['created_maps'])}\n"
         # Never miss a chance to be cooler than others
         if user.id == 1077309729942024302:
             description += "- **Bots Created:** This one and some others\n" \
@@ -203,38 +198,46 @@ class UserCog(CogBase):
             description=description.strip(),
         )
         if profile["medals"]["wins"] > 0:
-            banner_url = profile["bannerURL"] if profile["bannerURL"] else empty_profile["bannerURL"]
+            banner_url = profile["banner_url"] if profile["banner_url"] else empty_profile["banner_url"]
             embed.set_image(url=get_banner_medals_url(banner_url, profile["medals"]))
-        elif profile["bannerURL"] and profile != empty_profile:
-            embed.set_image(url=profile["bannerURL"])
+        elif profile["banner_url"] and profile != empty_profile:
+            embed.set_image(url=profile["banner_url"])
 
-        embed.set_thumbnail(url=profile["avatarURL"] if profile["avatarURL"] else empty_profile["avatarURL"])
+        embed.set_thumbnail(url=profile["avatar_url"] if profile["avatar_url"] else empty_profile["avatar_url"])
 
-        for stats in sorted(profile["list_stats"], key=lambda x: x["format_id"]):
-            format_data = next(f for f in formats if f["id"] == stats["format_id"])
+        for rank in sorted(profile["ranks"], key=lambda x: x["format_id"]):
+            format_data = next(f for f in formats if f["id"] == rank["format_id"])
             if format_data["hidden"]:
                 continue
 
             something = True
-            prf = stats["stats"]
-            description = f'**Score:** {int(prf["points"]) if prf["points"].is_integer() else prf["points"]}pt ' + \
-                          placements_emojis.get(prf["pts_placement"], f'(#{prf["pts_placement"]})')
-            if prf["lccs"]:
-                amount = int(prf["lccs"]) if prf["lccs"].is_integer() else prf["lccs"]
+            description = ""
+            if rank["points"] is not None:
+                pts = rank["points"]["score"]
+                description = f'**Score:** {int(pts) if pts.is_integer() else pts}pt ' + \
+                              placements_emojis.get(rank["points"]["placement"], f'(#{rank["points"]["placement"]})')
+            if rank["lccs"]["score"]:
+                score = rank["lccs"]["score"]
+                amount = int(score) if score.is_integer() else score
+                plcmt = rank["lccs"]["placement"]
                 description += f'\n- {EmjMedals.lcc} {amount} LCCs ' + \
-                               placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
-            if prf["no_geraldo"]:
-                amount = int(prf["no_geraldo"]) if prf["lccs"].is_integer() else prf["no_geraldo"]
+                               (placements_emojis.get(plcmt, f'(#{plcmt})') if plcmt else "")
+            if rank["no_geraldo"]["score"]:
+                score = rank["no_geraldo"]["score"]
+                amount = int(score) if score.is_integer() else score
+                plcmt = rank["no_geraldo"]["placement"]
                 description += f'\n- {EmjMedals.no_opt_hero} {amount} No Optimal Hero runs ' + \
-                               placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
-            if prf["black_border"]:
-                amount = int(prf["black_border"]) if prf["lccs"].is_integer() else prf["black_border"]
+                               (placements_emojis.get(plcmt, f'(#{plcmt})') if plcmt else "")
+            if rank["black_border"]["score"]:
+                score = rank["black_border"]["score"]
+                amount = int(score) if score.is_integer() else score
+                plcmt = rank["black_border"]["placement"]
                 description += f'\n- {EmjMedals.bb} {amount} Black Border runs ' + \
-                               placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
+                               (placements_emojis.get(plcmt, f'(#{plcmt})') if plcmt else "")
 
             embed.add_field(name=f"{format_data['emoji']} {format_data['name']} Stats", value=description, inline=True)
 
-        if user.id == interaction.user.id and profile["avatarURL"] is None:
+        if user.id == interaction.user.id and profile["avatar_url"] is None:
             embed.set_footer(
                 text="You can set a profile picture either through the website "
                      "or the /oak command"

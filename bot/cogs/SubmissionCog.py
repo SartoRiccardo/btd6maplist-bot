@@ -176,15 +176,15 @@ class SubmissionCog(CogBase):
         # within the 3-second Discord threshold because it's local, otherwise
         # it probably has to defer. But if it does, it can't show the modal.
         try:
-            ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
+            ml_user = await get_maplist_user(interaction.user.id)
         except MaplistResNotFound:
             ml_user = None
 
         if ml_user:
             permissions = set()
-            for perms in ml_user["permissions"]:
-                if perms["format"] is None or perms["format"] == format_id:
-                    permissions.update(perms["permissions"])
+            for perm_name, format_ids in ml_user["permissions"].items():
+                if None in format_ids or format_id in format_ids:
+                    permissions.add(perm_name)
 
             if "create:map_submission" not in permissions:
                 return await interaction.response.send_message(
@@ -385,9 +385,9 @@ class SubmissionCog(CogBase):
 
             permissions = set()
             if ml_user:
-                for perms in ml_user["permissions"]:
-                    if perms["format"] is None or perms["format"] == format_id:
-                        permissions.update(perms["permissions"])
+                for perm_name, format_ids in ml_user["permissions"].items():
+                    if None in format_ids or format_id in format_ids:
+                        permissions.add(perm_name)
 
             return MRunSubmission(
                 callback_wrapper,
@@ -401,7 +401,7 @@ class SubmissionCog(CogBase):
             )
 
         try:
-            ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
+            ml_user = await get_maplist_user(interaction.user.id)
         except MaplistResNotFound:
             ml_user = None
 
