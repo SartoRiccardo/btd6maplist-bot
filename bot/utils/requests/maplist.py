@@ -15,11 +15,8 @@ from bot.utils.requests.maplist_types import (
     LeaderboardPage, MaplistUser,
     LinkedRoleUpdate,
 )
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding, utils
 import json
 from aiohttp import FormData
-import base64
 import urllib.parse
 
 http = bot.utils.http
@@ -51,42 +48,6 @@ class _BytesCapture:
     def data(self) -> bytes:
         return bytes(self._buf)
 
-
-# Signature methods & vulnerabilities: https://en.wikipedia.org/wiki/Digital_signature#Method
-# Good article on RSA signatures: https://cryptobook.nakov.com/digital-signatures/rsa-signatures
-def sign(message: bytes) -> str:
-    # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/#signing
-    signature = http.private_key.sign(
-        message,
-        padding=padding.PSS(
-            padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH,
-        ),
-        algorithm=hashes.SHA256(),
-    )
-    return base64.b64encode(signature).decode()
-
-
-def partial_sign(message: bytes, current: hashes.Hash | None = None) -> hashes.Hash:
-    if current is None:
-        current = hashes.Hash(hashes.SHA256())
-    current.update(message)
-    return current
-
-
-def finish_sign(current: hashes.Hash) -> str:
-    sha256 = hashes.SHA256()
-
-    digest = current.finalize()
-    signature = http.private_key.sign(
-        digest,
-        padding.PSS(
-            padding.MGF1(sha256),
-            salt_length=padding.PSS.MAX_LENGTH,
-        ),
-        utils.Prehashed(sha256),
-    )
-    return base64.b64encode(signature).decode()
 
 
 async def get_maplist_map(map_id: str) -> FullMap:
@@ -240,36 +201,40 @@ async def submit_run(
         leftover: int | None,
         run_format: int,
 ) -> None:
-    data = {
-        "user": {
-            "id": user.id,
-            "username": user.name,
-            "avatar_url": user.display_avatar.url,
-        },
-        "format": run_format,
-        "notes": notes,
-        "black_border": black_border,
-        "no_geraldo": no_optimal_hero,
-        "current_lcc": is_lcc,
-        "leftover": leftover,
-        "video_proof_url": vproof_url,
-    }
-    data_str = json.dumps(data)
-    contents_hash = partial_sign((map_id+data_str).encode())
+    path = "/bot/completions/submit"
 
     form_data = FormData()
-    for i, file in enumerate(proofs):
+    form_data.add_field("_user", json.dumps({"discord_id": str(user.id), "name": user.name}))
+    form_data.add_field("map", map_id)
+    form_data.add_field("format_id", str(run_format))
+    if black_border:
+        form_data.add_field("black_border", "true")
+    if no_optimal_hero:
+        form_data.add_field("no_geraldo", "true")
+    if is_lcc and leftover is not None:
+        form_data.add_field("lcc", json.dumps({"leftover": leftover}))
+    if notes:
+        form_data.add_field("subm_notes", notes)
+    for url in vproof_url:
+        form_data.add_field("proof_videos", url)
+    for file in proofs:
         fcontents = await file.read()
-        contents_hash = partial_sign(fcontents, current=contents_hash)
         form_data.add_field(
-            f"proof_completion[{i}]",
+            "proof_images",
             io.BytesIO(fcontents),
             filename=file.filename,
             content_type=file.content_type,
         )
-    form_data.add_field("data", json.dumps({"data": data_str, "signature": finish_sign(contents_hash)}))
 
-    async with http.client.post(f"{API_BASE_URL}/maps/{map_id}/completions/submit/bot", data=form_data) as resp:
+    writer = form_data()
+    buf = _BytesCapture()
+    await writer.write(buf)
+    body = buf.data
+
+    headers = hmac_headers("POST", path, body, content_type=None)
+    headers["Content-Type"] = writer.content_type
+
+    async with http.client.post(f"{API_BASE_URL}{path}", data=body, headers=headers) as resp:
         if resp.status == 400:
             raise BadRequest(await resp.json())
         if not resp.ok:

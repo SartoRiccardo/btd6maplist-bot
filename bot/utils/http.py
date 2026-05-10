@@ -1,13 +1,10 @@
 import asyncio
 import os
 import aiohttp_client_cache
-import cryptography.hazmat.primitives.asymmetric.rsa
-from cryptography.hazmat.primitives import serialization
 from bot.utils.colors import purple
 
 
 client: aiohttp_client_cache.CachedSession | None = None
-private_key: cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey | None = None
 
 
 async def init_http_client():
@@ -21,15 +18,7 @@ async def init_http_client():
     )
 
     async def init_session():
-        global client, private_key
-
-        with open(os.environ.get("PRIVKEY_PATH", "btd6maplist-bot.pem"), "rb") as fin:
-            _privkey_pswd = os.environ.get("PRIVKEY_PSWD", "")
-            private_key = serialization.load_pem_private_key(
-                fin.read(),
-                password=_privkey_pswd.encode() if _privkey_pswd else None,
-            )
-            print(f"{purple('[HTTP]')} Loaded private key")
+        global client
 
         async with aiohttp_client_cache.CachedSession(cache=cache) as session:
             client = session
