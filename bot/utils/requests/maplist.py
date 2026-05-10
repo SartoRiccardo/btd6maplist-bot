@@ -36,8 +36,45 @@ def hmac_headers(method: str, path: str, body: bytes | str = "", content_type: s
     return headers
 
 
+def multipart_signing_body(
+    fields: list[tuple[str, str]],
+    file_entries: list[tuple[str, bytes]],
+) -> bytes:
+    """Build the canonical signing body for multipart requests.
+
+    PHP cannot read php://input for multipart/form-data, so both sides agree on a
+    canonical JSON: sorted non-file fields + SHA-256 hashes of files grouped by
+    field name (alphabetically) and within each group in submission order.
+    """
+    field_dict: dict[str, str | list[str]] = {}
+    for name, value in fields:
+        if name in field_dict:
+            existing = field_dict[name]
+            if isinstance(existing, list):
+                existing.append(value)
+            else:
+                field_dict[name] = [existing, value]
+        else:
+            field_dict[name] = value
+
+    file_groups: dict[str, list[bytes]] = {}
+    for name, content in file_entries:
+        file_groups.setdefault(name, []).append(content)
+    file_hashes = [
+        hashlib.sha256(content).hexdigest()
+        for _, contents in sorted(file_groups.items())
+        for content in contents
+    ]
+
+    return json.dumps(
+        {"fields": field_dict, "file_hashes": file_hashes},
+        sort_keys=True,
+        separators=(',', ':'),
+    ).encode()
+
+
 class _BytesCapture:
-    """Minimal async stream writer that captures bytes for HMAC signing."""
+    """Minimal async stream writer that captures raw multipart bytes for sending."""
     def __init__(self) -> None:
         self._buf = bytearray()
 
@@ -179,13 +216,21 @@ async def submit_map(
     path = "/bot/maps/submit"
     proof_contents = await proof.read()
 
-    form_data = FormData()
-    form_data.add_field("_user", json.dumps({"discord_id": str(user.id), "name": user.name}))
-    form_data.add_field("code", code)
-    form_data.add_field("format_id", str(format_id))
-    form_data.add_field("proposed", str(proposed_diff))
+    user_json = json.dumps({"discord_id": str(user.id), "name": user.name})
+    fields: list[tuple[str, str]] = [
+        ("_user", user_json),
+        ("code", code),
+        ("format_id", str(format_id)),
+        ("proposed", str(proposed_diff)),
+    ]
     if notes:
-        form_data.add_field("subm_notes", notes)
+        fields.append(("subm_notes", notes))
+
+    signing_body = multipart_signing_body(fields, [("completion_proof", proof_contents)])
+
+    form_data = FormData()
+    for name, value in fields:
+        form_data.add_field(name, value)
     form_data.add_field(
         "completion_proof",
         io.BytesIO(proof_contents),
@@ -196,12 +241,11 @@ async def submit_map(
     writer = form_data()
     buf = _BytesCapture()
     await writer.write(buf)
-    body = buf.data
 
-    headers = hmac_headers("POST", path, body, content_type=None)
+    headers = hmac_headers("POST", path, signing_body, content_type=None)
     headers["Content-Type"] = writer.content_type
 
-    async with http.client.post(f"{API_BASE_URL}{path}", data=body, headers=headers) as resp:
+    async with http.client.post(f"{API_BASE_URL}{path}", data=buf.data, headers=headers) as resp:
         if resp.status == 422:
             raise BadRequest(await resp.json())
         if not resp.ok:
@@ -222,25 +266,35 @@ async def submit_run(
 ) -> None:
     path = "/bot/completions/submit"
 
-    form_data = FormData()
-    form_data.add_field("_user", json.dumps({"discord_id": str(user.id), "name": user.name}))
-    form_data.add_field("map", map_id)
-    form_data.add_field("format_id", str(run_format))
+    user_json = json.dumps({"discord_id": str(user.id), "name": user.name})
+    fields: list[tuple[str, str]] = [
+        ("_user", user_json),
+        ("map", map_id),
+        ("format_id", str(run_format)),
+    ]
     if black_border:
-        form_data.add_field("black_border", "true")
+        fields.append(("black_border", "true"))
     if no_optimal_hero:
-        form_data.add_field("no_geraldo", "true")
+        fields.append(("no_geraldo", "true"))
     if is_lcc and leftover is not None:
-        form_data.add_field("lcc", json.dumps({"leftover": leftover}))
+        fields.append(("lcc", json.dumps({"leftover": leftover})))
     if notes:
-        form_data.add_field("subm_notes", notes)
+        fields.append(("subm_notes", notes))
     for url in vproof_url:
-        form_data.add_field("proof_videos", url)
-    for file in proofs:
-        fcontents = await file.read()
+        fields.append(("proof_videos", url))
+
+    proof_contents = [await file.read() for file in proofs]
+    file_entries = [("proof_images", content) for content in proof_contents]
+
+    signing_body = multipart_signing_body(fields, file_entries)
+
+    form_data = FormData()
+    for name, value in fields:
+        form_data.add_field(name, value)
+    for file, content in zip(proofs, proof_contents):
         form_data.add_field(
             "proof_images",
-            io.BytesIO(fcontents),
+            io.BytesIO(content),
             filename=file.filename,
             content_type=file.content_type,
         )
@@ -248,12 +302,11 @@ async def submit_run(
     writer = form_data()
     buf = _BytesCapture()
     await writer.write(buf)
-    body = buf.data
 
-    headers = hmac_headers("POST", path, body, content_type=None)
+    headers = hmac_headers("POST", path, signing_body, content_type=None)
     headers["Content-Type"] = writer.content_type
 
-    async with http.client.post(f"{API_BASE_URL}{path}", data=body, headers=headers) as resp:
+    async with http.client.post(f"{API_BASE_URL}{path}", data=buf.data, headers=headers) as resp:
         if resp.status == 400:
             raise BadRequest(await resp.json())
         if not resp.ok:
