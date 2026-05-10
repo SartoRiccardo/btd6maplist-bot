@@ -4,7 +4,8 @@ import math
 from discord.ext import commands
 from bot.utils.requests.maplist import (
     get_maplist_map,
-    get_map_completions,
+    get_completions,
+    get_map_lcc,
     get_maplist_config,
     get_experts,
     get_maplist,
@@ -13,7 +14,7 @@ from bot.utils.requests.maplist import (
     get_botb,
     get_nostalgia_pack,
 )
-from bot.utils.requests.maplist_types import FullMap, MapCompletion, MaplistConfig
+from bot.utils.requests.maplist_types import CompletionEntry, FullMap, MaplistConfig
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
 from bot.utils.models import MessageContent, LazyMessageContent
@@ -373,18 +374,16 @@ class MapInfoCog(CogBase):
             map_id: str,
             idx: int
     ) -> None:
-        map_data, ml_config, ml_formats = await asyncio.gather(
+        map_data, ml_config, ml_formats, max_lcc = await asyncio.gather(
             get_maplist_map(map_id),
             get_maplist_config(),
             get_formats(),
+            get_map_lcc(map_id),
         )
         visible_formats = [f["id"] for f in ml_formats if not f["hidden"]]
 
         if map_data["map_preview_url"].startswith("https://data.ninjakiwi.com"):
             map_data["map_preview_url"] = get_nk_preview_proxy(map_data["code"])
-
-        # TODO: fetch LCC from completions endpoint once get_map_completions is migrated
-        max_lcc = None
 
         pages = []
         select_pages = [
@@ -503,7 +502,7 @@ class MapInfoCog(CogBase):
     @staticmethod
     def get_lcc_message(
             map_data: FullMap,
-            lcc_data: MapCompletion | None,
+            lcc_data: CompletionEntry | None,
     ) -> MessageContent:
         if lcc_data is None:
             return MessageContent(content="-# No LCCs for this map!")
@@ -513,11 +512,11 @@ class MapInfoCog(CogBase):
             if any(proof_url.endswith(f".{ext}") for ext in image_formats)
         ]
 
-        ply_list = lcc_data["users"][0]["name"] \
-            if len(lcc_data["users"]) == 1 else \
-            "\n".join([f"- {usr['name']}" for usr in lcc_data["users"]])
+        ply_list = lcc_data["players"][0]["name"] \
+            if len(lcc_data["players"]) == 1 else \
+            "\n".join([f"- {usr['name']}" for usr in lcc_data["players"]])
 
-        format_emj = EmjIcons.format(lcc_data["format"])
+        format_emj = EmjIcons.format(lcc_data["format_id"])
         medals = [
             EmjMedals.bb if lcc_data["black_border"] else EmjMedals.win,
             EmjMedals.no_opt_hero if lcc_data["no_geraldo"] else None,
@@ -572,7 +571,7 @@ class MapInfoCog(CogBase):
 
         async def request_completions(pages: list[int]):
             lb_data = await asyncio.gather(*[
-                get_map_completions(map_data["code"], pg)
+                get_completions(map_data["code"], pg)
                 for pg in pages
             ])
             return {pg: lb_data[i] for i, pg in enumerate(pages)}
@@ -588,12 +587,12 @@ class MapInfoCog(CogBase):
                       "User                                         |  Format ~ Medals\n" \
                       "—————————————  +  —————————\n"
             for entry in entries:
-                for i, ply in enumerate(entry["users"]):
-                    comp_format_emj = EmjIcons.format(entry["format"])
+                for i, ply in enumerate(entry["players"]):
+                    comp_format_emj = EmjIcons.format(entry["format_id"])
                     comp_medals = [EmjMedals.bb if entry["black_border"] else EmjMedals.win]
-                    if entry["format"] <= 50 and entry["no_geraldo"]:
+                    if entry["format_id"] <= 50 and entry["no_geraldo"]:
                         comp_medals.append(EmjMedals.no_opt_hero)
-                    if entry["current_lcc"]:
+                    if entry["is_current_lcc"]:
                         comp_medals.append(EmjMedals.lcc)
                     comp_info = "↓     ↓     ↓     ↓" if i < len(entry["users"])-1 else \
                         medals_template.format(comp_format_emj, " ".join(comp_medals))
@@ -607,7 +606,7 @@ class MapInfoCog(CogBase):
             pages_to_req = [pg for pg in range(req_page_start, req_page_end+1)]
             comp_pages = await request_completions(pages_to_req)
 
-            client_pages = math.ceil(comp_pages[req_page_start]["total"] / items_page)
+            client_pages = math.ceil(comp_pages[req_page_start]["meta"]["total"] / items_page)
             view = VPaginateList(
                 interaction,
                 client_pages,
@@ -618,7 +617,7 @@ class MapInfoCog(CogBase):
                 request_completions,
                 build_message,
                 additional_views=[pages_view],
-                list_key="completions",
+                list_key="data",
             )
             return MessageContent(
                 content=view.message_on_page(1),

@@ -59,14 +59,8 @@ class Verification(TypedDict):
     user: MapUser
 
 
-class MapCompletion(TypedDict):
-    users: list[UserRef]
-    format: int
-    black_border: bool
-    no_geraldo: bool
-    current_lcc: bool
-    subm_proof_img: list[str]
-    lcc: LccData
+class CompletionLcc(TypedDict):
+    leftover: int
 
 
 class FullMap(TypedDict):
@@ -134,21 +128,46 @@ class RetroMap(TypedDict):
 
 
 # ---------------------------------------------------------------------------
-# Map completions  (get_map_completions)
-# NOTE: the function is annotated -> list but actually returns a paginated dict
+# Completions  (get_completions, get_map_lcc)
 # ---------------------------------------------------------------------------
 
-class MapCompletionEntry(TypedDict):
-    users: list[UserRef]
-    format: int
+class CompletionMapBase(TypedDict):
+    code: str
+    name: str
+    r6_start: int | None
+    map_data: str | None
+    map_preview_url: str
+    map_notes: str | None
+
+
+class CompletionEntry(TypedDict):
+    id: int
+    map_code: str
+    submitted_on: int
+    subm_notes: str | None
+    subm_proof_img: list[str]
+    subm_proof_vid: list[str]
+    format_id: int
     black_border: bool
     no_geraldo: bool
-    current_lcc: bool
+    deleted_on: str | None
+    accepted_by: str | None
+    lcc: CompletionLcc | None
+    is_current_lcc: bool
+    players: list[MapUser]
+    map: CompletionMapBase
 
 
-class MapCompletionsPage(TypedDict):
+class CompletionsMeta(TypedDict):
+    current_page: int
+    last_page: int
+    per_page: int
     total: int
-    completions: list[MapCompletionEntry]
+
+
+class CompletionsPage(TypedDict):
+    data: list[CompletionEntry]
+    meta: CompletionsMeta
 
 
 # ---------------------------------------------------------------------------

@@ -8,7 +8,7 @@ from bot.exceptions import MaplistResNotFound, ErrorStatusCode, BadRequest
 from bot.types import Format
 from bot.utils.requests.maplist_types import (
     FullMap, MapEntry, RetroMap,
-    MapCompletionsPage, FormatData, MaplistConfig,
+    CompletionEntry, CompletionsPage, FormatData, MaplistConfig,
     LeaderboardPage, MaplistUser, UserCompletionsPage,
     LinkedRoleUpdate,
 )
@@ -95,10 +95,17 @@ async def get_retro_maps() -> list[RetroMap]:
         return (await resp.json())["data"]
 
 
-async def get_map_completions(map_code: str, page: int) -> MapCompletionsPage:
-    qparams = {page: page}
-    async with http.client.get(f"{API_BASE_URL}/maps/{map_code}/completions?{urllib.parse.urlencode(qparams)}") as resp:
+async def get_completions(map_code: str, page: int) -> CompletionsPage:
+    qparams = {"map_code": map_code, "page": page}
+    async with http.client.get(f"{API_BASE_URL}/completions?{urllib.parse.urlencode(qparams)}") as resp:
         return await resp.json()
+
+
+async def get_map_lcc(map_code: str) -> CompletionEntry | None:
+    qparams = {"map_code": map_code, "lcc": "only"}
+    async with http.client.get(f"{API_BASE_URL}/completions?{urllib.parse.urlencode(qparams)}") as resp:
+        data = (await resp.json())["data"]
+        return next((c for c in data if c["is_current_lcc"]), None)
 
 
 async def get_formats() -> list[FormatData]:
