@@ -97,9 +97,20 @@ async def get_map_lcc(map_code: str) -> CompletionEntry | None:
         return next((c for c in data if c["is_current_lcc"]), None)
 
 
+_VOTE_CHANNEL_ENV: dict[int, tuple[str, str]] = {
+    1: ("MAPLIST_VOTE_CH_ID", "MAPLIST_VOTE_CH_ROLE_ID"),
+    51: ("EXPLIST_VOTE_CH_ID", "EXPLIST_VOTE_CH_ROLE_ID"),
+}
+
+
 async def get_formats() -> list[FormatData]:
     async with http.client.get(f"{API_BASE_URL}/formats") as resp:
-        return (await resp.json())["data"]
+        formats = (await resp.json())["data"]
+    for fmt in formats:
+        env_keys = _VOTE_CHANNEL_ENV.get(fmt["id"])
+        fmt["discord_vote_channel_id"] = os.environ.get(env_keys[0]) if env_keys else None
+        fmt["discord_vote_channel_ping_role_id"] = os.environ.get(env_keys[1]) if env_keys else None
+    return formats
 
 
 async def get_maplist_config() -> MaplistConfig:

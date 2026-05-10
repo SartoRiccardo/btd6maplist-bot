@@ -195,6 +195,8 @@ class FormatData(TypedDict):
     preview_map_1: CompletionMapBase | None
     preview_map_2: CompletionMapBase | None
     preview_map_3: CompletionMapBase | None
+    discord_vote_channel_id: str | None
+    discord_vote_channel_ping_role_id: str | None
 
 
 # ---------------------------------------------------------------------------

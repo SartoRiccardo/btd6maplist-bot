@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext import commands, tasks
 from bot.cogs.CogBase import CogBase
@@ -5,11 +6,10 @@ from bot.utils.decos import autodoc
 from datetime import datetime, timedelta
 from typing import Any, Literal
 import os
-from config import MAPLIST_VOTE_CH
 from bot.utils.env_transforms import get_nk_preview_proxy
 from bot.utils.colors import EmbedColor
 from bot.utils.requests.ninjakiwi import get_btd6_custom_map
-from bot.utils.requests.maplist import get_maplist_user
+from bot.utils.requests.maplist import get_maplist_user, get_formats
 from bot.exceptions import MaplistResNotFound
 
 
@@ -127,17 +127,22 @@ class AdminUtilsCog(CogBase):
         await interaction.response.defer(ephemeral=True)
 
         format_id = _FORMAT_IDS[game_format]
-        try:
-            permissions = (await get_maplist_user(interaction.user.id, include=["permissions"]))["permissions"]
-        except MaplistResNotFound:
-            permissions = {}
+        user_data, formats = await asyncio.gather(
+            get_maplist_user(interaction.user.id, include=["permissions"]),
+            get_formats(),
+            return_exceptions=True,
+        )
+        permissions = user_data["permissions"] if not isinstance(user_data, BaseException) else {}
+
         if not _has_mod_permission(permissions, format_id):
             return await interaction.edit_original_response(
                 content=f"You are not a {game_format} Moderator!",
             )
 
-        vote_ch_id, vote_role_id = MAPLIST_VOTE_CH[game_format]
-        vote_ch = await self.bot.fetch_channel(vote_ch_id)
+        fmt = next(f for f in formats if f["id"] == format_id)
+        vote_ch_id = fmt["discord_vote_channel_id"]
+        vote_role_id = fmt["discord_vote_channel_ping_role_id"]
+        vote_ch = await self.bot.fetch_channel(int(vote_ch_id))
 
         if map_code is None and map_preview is None:
             return await interaction.edit_original_response(
