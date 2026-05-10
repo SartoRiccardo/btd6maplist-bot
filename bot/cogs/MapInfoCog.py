@@ -131,7 +131,7 @@ class MapInfoCog(CogBase):
         ]
         diffval = labels.index(difficulty)
         experts = await get_experts()
-        experts = [exp for exp in experts if exp["format_idx"] == diffval]
+        experts = [exp for exp in experts if exp["difficulty"] == diffval]
 
         def create_message(entries: list[dict]) -> discord.Embed:
             content = "\n".join([
@@ -170,7 +170,7 @@ class MapInfoCog(CogBase):
 
         def create_message(entries: list[dict]) -> discord.Embed:
             content = "\n".join([
-                f"`{'#'+str(mlmap['format_idx']): >3}` (`{points(mlmap['format_idx'], cfg): >3}pt`) ｌ "
+                f"`{'#'+str(mlmap['placement_curver']): >3}` (`{points(mlmap['placement_curver'], cfg): >3}pt`) ｌ "
                 f"`{mlmap['code']}` ｌ {mlmap['name']}"
                 for mlmap in entries
             ])
@@ -230,7 +230,7 @@ class MapInfoCog(CogBase):
         def create_message(entries: list[dict]) -> discord.Embed:
             extr_emoji = f'  {EmjIcons.botb_extreme}'
             content = "\n".join([
-                f"`{map_data['code']}` ｌ{extr_emoji if map_data['format_idx'] == 4 else ''} {map_data['name']}"
+                f"`{map_data['code']}` ｌ{extr_emoji if map_data['botb_difficulty'] == 4 else ''} {map_data['name']}"
                 for map_data in entries
             ])
             icon, diffq, desc = info[diffval]
@@ -279,12 +279,12 @@ class MapInfoCog(CogBase):
         nostalgia_pack = await get_nostalgia_pack(diffval)
 
         def create_message(entries: list[dict]) -> discord.Embed:
-            category = entries[0]["format_idx"]["category"]["name"]
+            category = entries[0]["retro_map"]["game"]["category_name"]
             content = "\n".join([
                 (
-                    f"`{map_data['code']}` ｌ {map_data['format_idx']['name']}"
+                    f"`{map_data['code']}` ｌ {map_data['retro_map']['name']}"
                     if map_data["code"] else
-                    f"`       ` ｌ ~~{map_data['format_idx']['name']}~~ {EmjIcons.np_missing}"
+                    f"`       ` ｌ ~~{map_data['retro_map']['name']}~~ {EmjIcons.np_missing}"
                 )
                 for map_data in entries
             ])
@@ -299,13 +299,13 @@ class MapInfoCog(CogBase):
             )
 
         nostalgia_pack.sort(
-            key=lambda x: (x["format_idx"]["category"]["id"], x["format_idx"]["sort_order"])
+            key=lambda x: (x["retro_map"]["game"]["category_id"], x["retro_map"]["sort_order"])
         )
 
         maps_by_category = {}
         for map_data in nostalgia_pack:
             maps_by_category \
-                .setdefault(map_data["format_idx"]["category"]["name"], []) \
+                .setdefault(map_data["retro_map"]["game"]["category_name"], []) \
                 .append(map_data)
 
         pages = []
