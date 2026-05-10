@@ -131,8 +131,10 @@ async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> Leade
         return await resp.json()
 
 
-async def get_maplist_user(uid: int) -> MaplistUser:
-    qparams = {"include": "flair,medals,permissions,ranks"}
+async def get_maplist_user(uid: int, include: list[str] | None = None) -> MaplistUser:
+    if include is None:
+        include = ["flair", "medals", "permissions", "ranks"]
+    qparams = {"include": ",".join(include)}
     async with http.client.get(f"{API_BASE_URL}/users/{uid}?{urllib.parse.urlencode(qparams)}") as resp:
         if resp.status == 404:
             raise MaplistResNotFound("user")

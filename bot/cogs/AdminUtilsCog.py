@@ -5,11 +5,27 @@ from bot.utils.decos import autodoc
 from datetime import datetime, timedelta
 from typing import Any, Literal
 import os
-from config import MAPLIST_VOTE_CH, MAPLIST_ROLES
+from config import MAPLIST_VOTE_CH
 from bot.utils.env_transforms import get_nk_preview_proxy
 from bot.utils.colors import EmbedColor
-from bot.utils.discordutils import roles_overlap
 from bot.utils.requests.ninjakiwi import get_btd6_custom_map
+from bot.utils.requests.maplist import get_maplist_user
+from bot.exceptions import MaplistResNotFound
+
+
+_MAP_MOD_PERMISSIONS = {
+    "create:map", "edit:map", "delete:map",
+    "create:map_submission", "edit:map_submission", "delete:map_submission",
+}
+
+_FORMAT_IDS = {"Maplist": 1, "Expert List": 51}
+
+
+def _has_mod_permission(permissions: dict[str, list[int | None]], format_id: int) -> bool:
+    return any(
+        perm in _MAP_MOD_PERMISSIONS and (None in fmts or format_id in fmts)
+        for perm, fmts in permissions.items()
+    )
 
 
 class AdminUtilsCog(CogBase):
@@ -65,7 +81,7 @@ class AdminUtilsCog(CogBase):
             message = await channel.fetch_message(msg_id)
         except (discord.NotFound, discord.Forbidden):
             return
-        
+
         if len(message.embeds) == 0:
             return
 
@@ -108,32 +124,29 @@ class AdminUtilsCog(CogBase):
             map_preview: discord.Attachment = None,
             silent: bool = False,
     ) -> None:
-        if game_format == "Maplist" and \
-                not roles_overlap(interaction.user, MAPLIST_ROLES["admin"] + MAPLIST_ROLES["list_mod"]):
-            return await interaction.response.send_message(
-                content="You are not a Maplist Moderator!",
-                ephemeral=True,
-            )
-        elif game_format == "Expert List" and \
-                not roles_overlap(interaction.user, MAPLIST_ROLES["admin"] + MAPLIST_ROLES["expert_mod"]):
-            return await interaction.response.send_message(
-                content="You are not an Expert List Moderator!",
-                ephemeral=True,
+        await interaction.response.defer(ephemeral=True)
+
+        format_id = _FORMAT_IDS[game_format]
+        try:
+            permissions = (await get_maplist_user(interaction.user.id, include=["permissions"]))["permissions"]
+        except MaplistResNotFound:
+            permissions = {}
+        if not _has_mod_permission(permissions, format_id):
+            return await interaction.edit_original_response(
+                content=f"You are not a {game_format} Moderator!",
             )
 
         vote_ch_id, vote_role_id = MAPLIST_VOTE_CH[game_format]
         vote_ch = await self.bot.fetch_channel(vote_ch_id)
 
         if map_code is None and map_preview is None:
-            return await interaction.response.send_message(
+            return await interaction.edit_original_response(
                 content="You must either provide a `map_code` or a `map_preview`!",
-                ephemeral=True,
             )
 
         if map_preview is None and (await get_btd6_custom_map(map_code)) is None:
-            return await interaction.response.send_message(
+            return await interaction.edit_original_response(
                 content=f"There is no map with code {map_code}",
-                ephemeral=True,
             )
 
         embed_url = map_preview.url if map_preview is not None else get_nk_preview_proxy(map_code)
@@ -155,9 +168,8 @@ class AdminUtilsCog(CogBase):
         )
         msg_url = f"https://discord.com/channels/{os.environ['MAPLIST_GID']}/{vote_ch_id}/{message.id}"
 
-        await interaction.response.send_message(
+        await interaction.edit_original_response(
             content=f"You successfully [called a vote]({msg_url})!",
-            ephemeral=True,
         )
 
         await message.add_reaction("✅")
