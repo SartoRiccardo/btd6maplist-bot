@@ -139,6 +139,8 @@ async def get_leaderboard(lb_type: str, game_format: Format, page: int, per_page
 
     qparams = {"value": value, "page": page, "per_page": per_page} if per_page else {"value": value, "page": page}
     async with http.client.get(f"{API_BASE_URL}/api/formats/{fmt}/leaderboard?{urllib.parse.urlencode(qparams)}") as resp:
+        if resp.status == 404:
+            raise MaplistResNotFound("leaderboard")
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
         return await resp.json()

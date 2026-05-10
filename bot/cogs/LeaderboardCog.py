@@ -6,6 +6,7 @@ from bot.utils.emojis import EmjPlacements
 from bot.utils.decos import autodoc
 from bot.types import Format, LbType
 from bot.utils.requests.maplist import get_leaderboard
+from bot.exceptions import MaplistResNotFound
 from bot.views import VPaginateList
 
 
@@ -50,7 +51,12 @@ class LeaderboardCog(CogBase):
 
         await interaction.response.defer(ephemeral=hide)
 
-        lb_pages = await self.request_pages(lb_type, game_format, [page])
+        try:
+            lb_pages = await self.request_pages(lb_type, game_format, [page])
+        except MaplistResNotFound:
+            return await interaction.edit_original_response(
+                content=f"❌ The {lb_type} leaderboard for the {game_format} does not exist!",
+            )
 
         if lb_pages[page]["meta"]["total"] == 0:
             return await interaction.edit_original_response(
