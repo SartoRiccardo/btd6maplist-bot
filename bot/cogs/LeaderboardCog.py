@@ -31,6 +31,7 @@ class LeaderboardCog(CogBase):
         name="leaderboard",
         description="Get the Maplist leaderboard",
     )
+    @discord.app_commands.rename(game_format="list")
     @discord.app_commands.describe(
         lb_type="The type of leaderboard points",
     )

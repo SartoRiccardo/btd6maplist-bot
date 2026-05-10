@@ -110,6 +110,7 @@ class AdminUtilsCog(CogBase):
         name="map-vote",
         description="Call other moderators to vote on a map",
     )
+    @discord.app_commands.rename(game_format="list")
     @discord.app_commands.describe(
         map_code="The map code to check",
         map_preview="An arbitrary image to call the vote on",
