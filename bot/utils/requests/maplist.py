@@ -8,7 +8,7 @@ from bot.exceptions import MaplistResNotFound, ErrorStatusCode, BadRequest
 from bot.types import Format
 from bot.utils.requests.maplist_types import (
     FullMap, MapEntry, RetroMap,
-    CompletionEntry, CompletionsPage, FormatData, MaplistConfig,
+    CompletionEntry, CompletionMapBase, CompletionsPage, FormatData, MaplistConfig,
     LeaderboardPage, MaplistUser,
     LinkedRoleUpdate,
 )
@@ -375,11 +375,11 @@ async def reject_map(who: discord.User, message_id: int) -> None:
             raise ErrorStatusCode(resp.status, errors=errors)
 
 
-async def search_maps(query: str) -> list[dict]:
-    qparams = {"q": query, "type": "map"}
+async def search_maps(query: str) -> list[CompletionMapBase]:
+    qparams = {"q": query, "entities": "maps"}
     async with http.client.get(f"{API_BASE_URL}/search?{urllib.parse.urlencode(qparams)}") as resp:
         if resp.ok:
-            return [result["data"] for result in await resp.json()]
+            return [result["result"] for result in await resp.json()]
         return []
 
 
