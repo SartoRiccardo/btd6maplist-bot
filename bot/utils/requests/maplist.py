@@ -1,5 +1,8 @@
+import hashlib
+import hmac
 import io
 import os
+import time
 
 import aiohttp.hdrs
 import discord
@@ -21,7 +24,19 @@ import urllib.parse
 
 http = bot.utils.http
 API_BASE_URL = os.environ["API_BASE_URL"]
+BOT_SECRET = os.environ["BOT_SECRET"].encode()
 os.makedirs(os.path.join(os.path.expanduser(os.environ.get("DATA_PATH", "~/data")), "tmp"), exist_ok=True)
+
+
+def hmac_headers(method: str, path: str, body: str) -> dict[str, str]:
+    timestamp = str(int(time.time()))
+    message = f"{timestamp}\n{method.upper()}\n{path}\n{body}".encode()
+    signature = hmac.new(BOT_SECRET, message, hashlib.sha256).hexdigest()
+    return {
+        "X-Timestamp": timestamp,
+        "X-Signature": signature,
+        "Content-Type": "application/json",
+    }
 
 
 # Signature methods & vulnerabilities: https://en.wikipedia.org/wiki/Digital_signature#Method
@@ -294,54 +309,34 @@ async def set_oak(user: discord.User, oak: str) -> None:
             raise ErrorStatusCode(resp.status)
 
 
-async def accept_run(who: discord.User, run_id: int) -> None:
-    data = {
-        "user": {
-            "id": str(who.id),
-            "username": who.name,
-            "name": who.display_name,
-        },
-    }
-    data_str = json.dumps(data)
-    signature = sign(f"{run_id}{data_str}".encode())
-
-    payload = {"data": data_str, "signature": signature}
-    async with http.client.put(f"{API_BASE_URL}/completions/{run_id}/accept/bot", json=payload) as resp:
-        if resp.status == 400:
+async def accept_run(who: discord.User, message_id: int) -> None:
+    path = "/bot/completions/accept"
+    body = json.dumps({
+        "_user": {"discord_id": str(who.id), "name": who.name},
+        "completion_webhook_message_id": str(message_id),
+    })
+    async with http.client.post(f"{API_BASE_URL}{path}", data=body, headers=hmac_headers("POST", path, body)) as resp:
+        if resp.status == 422:
             raise BadRequest(await resp.json())
         elif resp.status == 404:
             raise MaplistResNotFound("completion")
-        if not resp.ok:
-            errors = None
-            if "application/json" in resp.headers.get(aiohttp.hdrs.CONTENT_TYPE) and \
-                    "errors" in (resp_data := await resp.json()):
-                errors = resp_data["errors"]
-            raise ErrorStatusCode(resp.status, errors=errors)
+        elif not resp.ok:
+            raise ErrorStatusCode(resp.status)
 
 
-async def reject_run(who: discord.User, run_id: int) -> None:
-    data = {
-        "user": {
-            "id": str(who.id),
-            "username": who.name,
-            "name": who.display_name,
-        },
-    }
-    data_str = json.dumps(data)
-    signature = sign(f"{run_id}{data_str}".encode())
-
-    payload = {"data": data_str, "signature": signature}
-    async with http.client.delete(f"{API_BASE_URL}/completions/{run_id}/bot", json=payload) as resp:
-        if resp.status == 400:
+async def reject_run(who: discord.User, message_id: int) -> None:
+    path = "/bot/completions/reject"
+    body = json.dumps({
+        "_user": {"discord_id": str(who.id), "name": who.name},
+        "completion_webhook_message_id": str(message_id),
+    })
+    async with http.client.post(f"{API_BASE_URL}{path}", data=body, headers=hmac_headers("POST", path, body)) as resp:
+        if resp.status == 422:
             raise BadRequest(await resp.json())
         elif resp.status == 404:
             raise MaplistResNotFound("completion")
-        if not resp.ok:
-            errors = None
-            if "application/json" in resp.headers.get(aiohttp.hdrs.CONTENT_TYPE) and \
-                    "errors" in (resp_data := await resp.json()):
-                errors = resp_data["errors"]
-            raise ErrorStatusCode(resp.status, errors=errors)
+        elif not resp.ok:
+            raise ErrorStatusCode(resp.status)
 
 
 def get_banner_medals_url(banner_url: str, medals: dict) -> str:
@@ -350,29 +345,18 @@ def get_banner_medals_url(banner_url: str, medals: dict) -> str:
 
 
 async def reject_map(who: discord.User, message_id: int) -> None:
-    data = {
-        "user": {
-            "id": str(who.id),
-            "username": who.name,
-            "name": who.display_name,
-        },
-        "message_id": str(message_id),
-    }
-    data_str = json.dumps(data)
-    signature = sign(data_str.encode())
-
-    payload = {"data": data_str, "signature": signature}
-    async with http.client.delete(f"{API_BASE_URL}/maps/submit/bot", json=payload) as resp:
-        if resp.status == 400:
+    path = "/bot/maps/submit/reject"
+    body = json.dumps({
+        "_user": {"discord_id": str(who.id), "name": who.name},
+        "webhook_message_id": str(message_id),
+    })
+    async with http.client.post(f"{API_BASE_URL}{path}", data=body, headers=hmac_headers("POST", path, body)) as resp:
+        if resp.status == 422:
             raise BadRequest(await resp.json())
         elif resp.status == 404:
             raise MaplistResNotFound("map submission")
-        if not resp.ok:
-            errors = None
-            if "application/json" in resp.headers.get(aiohttp.hdrs.CONTENT_TYPE) and \
-                    "errors" in (resp_data := await resp.json()):
-                errors = resp_data["errors"]
-            raise ErrorStatusCode(resp.status, errors=errors)
+        elif not resp.ok:
+            raise ErrorStatusCode(resp.status)
 
 
 async def search_maps(query: str) -> list[CompletionMapBase]:
