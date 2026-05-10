@@ -176,14 +176,25 @@ class CompletionsPage(TypedDict):
 
 class FormatData(TypedDict):
     id: int
-    hidden: bool
-    emoji: str
     name: str
-    run_submission_wh: str | None
-    map_submission_wh: str | None
-    run_submission_status: str   # "open" | "closed" | ...
-    map_submission_status: str   # "open" | "open_chimps" | "closed" | ...
+    slug: str
+    description: str
+    button_text: str
+    map_submission_rules: str
+    completion_submission_rules: str
+    discord_server_url: str | None
+    hidden: bool
+    run_submission_status: Literal["open", "closed", "lcc_only"]
+    map_submission_status: Literal["open", "closed"]
     proposed_difficulties: list[str] | None
+    emoji: str | None
+    is_no_geraldo_enabled: bool
+    is_lcc_leaderboard_enabled: bool
+    is_black_border_leaderboard_enabled: bool
+    is_no_geraldo_leaderboard_enabled: bool
+    preview_map_1: CompletionMapBase | None
+    preview_map_2: CompletionMapBase | None
+    preview_map_3: CompletionMapBase | None
 
 
 # ---------------------------------------------------------------------------

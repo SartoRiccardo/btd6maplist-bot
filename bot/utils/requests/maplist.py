@@ -109,9 +109,8 @@ async def get_map_lcc(map_code: str) -> CompletionEntry | None:
 
 
 async def get_formats() -> list[FormatData]:
-    qparams = {"signature": sign(b"")}
-    async with http.client.get(f"{API_BASE_URL}/formats/bot?{urllib.parse.urlencode(qparams)}") as resp:
-        return await resp.json()
+    async with http.client.get(f"{API_BASE_URL}/formats") as resp:
+        return (await resp.json())["data"]
 
 
 async def get_maplist_config() -> MaplistConfig:

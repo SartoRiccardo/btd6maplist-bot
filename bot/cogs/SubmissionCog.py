@@ -257,13 +257,6 @@ class SubmissionCog(CogBase):
         formats = await get_formats()
         for fmt in formats:
             if fmt["id"] == format_id:
-                if fmt["map_submission_status"] == "open_chimps" and proof is None:
-                    return await interaction.response.send_message(
-                        ephemeral=True,
-                        content="⚠️ Map submissions in this list require a screenshot of someone beating CHIMPS mode "
-                                "in your map.\n\nSubmit the screenshot via the `proof` option when running this "
-                                "command!",
-                    )
                 if fmt["map_submission_status"] == "closed":
                     return await interaction.response.send_message(
                         ephemeral=True,
