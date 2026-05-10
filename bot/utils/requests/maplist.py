@@ -288,21 +288,16 @@ async def read_rules(user: discord.User) -> None:
             raise ErrorStatusCode(resp.status)
 
 
-async def set_oak(user: discord.User, oak: str) -> None:
-    data = {
-        "user": {
-            "id": str(user.id),
-            "username": user.name,
-            "name": user.display_name,
-        },
-        "oak": oak,
-    }
-    data_str = json.dumps(data)
-    signature = sign(f"{user.id}{data_str}".encode())
-
-    payload = {"data": data_str, "signature": signature}
-    async with http.client.put(f"{API_BASE_URL}/users/{user.id}/bot", json=payload) as resp:
-        if not resp.ok:
+async def set_oak(user: discord.User, oak: str | None = None) -> None:
+    path = f"/bot/users/{user.id}"
+    body = json.dumps({
+        "_user": {"discord_id": str(user.id), "name": user.name},
+        "nk_oak": oak,
+    })
+    async with http.client.put(f"{API_BASE_URL}{path}", data=body, headers=hmac_headers("PUT", path, body)) as resp:
+        if resp.status == 422:
+            raise BadRequest(await resp.json())
+        elif not resp.ok:
             raise ErrorStatusCode(resp.status)
 
 
