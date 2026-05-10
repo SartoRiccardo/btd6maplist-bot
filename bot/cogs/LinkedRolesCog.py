@@ -60,9 +60,9 @@ class LinkedRolesCog(CogBase):
                 continue
 
             try:
-                if u["action"] == "ADD":
+                if u["is_new"]:
                     await member.add_roles(role)
-                elif u["action"] == "DEL":
+                else:
                     await member.remove_roles(role)
             except (discord.Forbidden, discord.HTTPException):
                 bad_roles.add(role)

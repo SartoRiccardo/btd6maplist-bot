@@ -272,18 +272,9 @@ async def submit_run(
 
 
 async def read_rules(user: discord.User) -> None:
-    data = {
-        "user": {
-            "id": str(user.id),
-            "username": user.name,
-            "name": user.display_name,
-        },
-    }
-    data_str = json.dumps(data)
-    signature = sign(data_str.encode())
-
-    payload = {"data": data_str, "signature": signature}
-    async with http.client.put(f"{API_BASE_URL}/read-rules/bot", json=payload) as resp:
+    path = "/bot/read-rules"
+    body = json.dumps({"_user": {"discord_id": str(user.id), "name": user.name}})
+    async with http.client.put(f"{API_BASE_URL}{path}", data=body, headers=hmac_headers("PUT", path, body)) as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
 
@@ -360,14 +351,14 @@ async def search_maps(query: str) -> list[CompletionMapBase]:
 
 
 async def get_linked_role_updates() -> list[LinkedRoleUpdate]:
-    qparams = {"signature": sign(b"")}
-    async with http.client.get(f"{API_BASE_URL}/roles/achievement/updates/bot?{urllib.parse.urlencode(qparams)}") as resp:
+    path = "/bot/roles/achievement/updates"
+    async with http.client.get(f"{API_BASE_URL}{path}", headers=hmac_headers("GET", path, "")) as resp:
         if not resp.ok:
             return []
         return await resp.json()
 
 
 async def confirm_linked_role_updates() -> None:
-    qparams = {"signature": sign(b"")}
-    async with http.client.post(f"{API_BASE_URL}/roles/achievement/updates/bot?{urllib.parse.urlencode(qparams)}") as resp:
+    path = "/bot/roles/achievement/updates"
+    async with http.client.post(f"{API_BASE_URL}{path}", headers=hmac_headers("POST", path, "")) as resp:
         pass

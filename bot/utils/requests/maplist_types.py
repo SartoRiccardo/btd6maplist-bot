@@ -283,7 +283,7 @@ class MaplistUser(TypedDict):
 # ---------------------------------------------------------------------------
 
 class LinkedRoleUpdate(TypedDict):
-    role_id: str
-    guild_id: str
     user_id: str
-    action: Literal["ADD", "DEL"]
+    guild_id: str
+    role_id: str
+    is_new: bool
