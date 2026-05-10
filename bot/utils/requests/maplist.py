@@ -51,7 +51,7 @@ class _BytesCapture:
 
 
 async def get_maplist_map(map_id: str) -> FullMap:
-    async with http.client.get(f"{API_BASE_URL}/maps/{map_id.upper()}") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/maps/{map_id.upper()}") as resp:
         if resp.status == 404:
             raise MaplistResNotFound("map")
         elif not resp.ok:
@@ -60,39 +60,39 @@ async def get_maplist_map(map_id: str) -> FullMap:
 
 
 async def get_experts() -> list[MapEntry]:
-    async with http.client.get(f"{API_BASE_URL}/maps?format_id=51") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/maps?format_id=51") as resp:
         return (await resp.json())["data"]
 
 
 async def get_maplist() -> list[MapEntry]:
-    async with http.client.get(f"{API_BASE_URL}/maps?format_id=1") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/maps?format_id=1") as resp:
         return (await resp.json())["data"]
 
 
 async def get_nostalgia_pack(game: int) -> list[MapEntry]:
-    async with http.client.get(f"{API_BASE_URL}/maps?format_id=11&format_subfilter={game}") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/maps?format_id=11&format_subfilter={game}") as resp:
         return (await resp.json())["data"]
 
 
 async def get_botb(difficulty: int) -> list[MapEntry]:
-    async with http.client.get(f"{API_BASE_URL}/maps?format_id=52&format_subfilter={difficulty}") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/maps?format_id=52&format_subfilter={difficulty}") as resp:
         return (await resp.json())["data"]
 
 
 async def get_retro_maps() -> list[RetroMap]:
-    async with http.client.get(f"{API_BASE_URL}/maps/retro") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/maps/retro") as resp:
         return (await resp.json())["data"]
 
 
 async def get_completions(map_code: str, page: int) -> CompletionsPage:
     qparams = {"map_code": map_code, "page": page}
-    async with http.client.get(f"{API_BASE_URL}/completions?{urllib.parse.urlencode(qparams)}") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/completions?{urllib.parse.urlencode(qparams)}") as resp:
         return await resp.json()
 
 
 async def get_map_lcc(map_code: str) -> CompletionEntry | None:
     qparams = {"map_code": map_code, "lcc": "only"}
-    async with http.client.get(f"{API_BASE_URL}/completions?{urllib.parse.urlencode(qparams)}") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/completions?{urllib.parse.urlencode(qparams)}") as resp:
         data = (await resp.json())["data"]
         return next((c for c in data if c["is_current_lcc"]), None)
 
@@ -104,7 +104,7 @@ _VOTE_CHANNEL_ENV: dict[int, tuple[str, str]] = {
 
 
 async def get_formats() -> list[FormatData]:
-    async with http.client.get(f"{API_BASE_URL}/formats") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/formats") as resp:
         formats = (await resp.json())["data"]
     for fmt in formats:
         env_keys = _VOTE_CHANNEL_ENV.get(fmt["id"])
@@ -114,7 +114,7 @@ async def get_formats() -> list[FormatData]:
 
 
 async def get_maplist_config() -> MaplistConfig:
-    async with http.client.get(f"{API_BASE_URL}/config") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/config") as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
         return await resp.json()
@@ -136,7 +136,7 @@ async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> Leade
     }.get(lb_type, "points")
 
     qparams = {"value": value, "page": page}
-    async with http.client.get(f"{API_BASE_URL}/formats/{fmt}/leaderboard?{urllib.parse.urlencode(qparams)}") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/formats/{fmt}/leaderboard?{urllib.parse.urlencode(qparams)}") as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
         return await resp.json()
@@ -146,7 +146,7 @@ async def get_maplist_user(uid: int, include: list[str] | None = None) -> Maplis
     if include is None:
         include = ["flair", "medals", "permissions", "ranks"]
     qparams = {"include": ",".join(include)}
-    async with http.client.get(f"{API_BASE_URL}/users/{uid}?{urllib.parse.urlencode(qparams)}") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/users/{uid}?{urllib.parse.urlencode(qparams)}") as resp:
         if resp.status == 404:
             raise MaplistResNotFound("user")
         if not resp.ok:
@@ -156,7 +156,7 @@ async def get_maplist_user(uid: int, include: list[str] | None = None) -> Maplis
 
 async def get_user_completions(uid: int, page: int = 1) -> CompletionsPage:
     qparams = {"player_id": uid, "page": page}
-    async with http.client.get(f"{API_BASE_URL}/completions?{urllib.parse.urlencode(qparams)}") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/completions?{urllib.parse.urlencode(qparams)}") as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
         return await resp.json()
@@ -327,7 +327,7 @@ async def reject_map(who: discord.User, message_id: int) -> None:
 
 async def search_maps(query: str) -> list[CompletionMapBase]:
     qparams = {"q": query, "entities": "maps"}
-    async with http.client.get(f"{API_BASE_URL}/search?{urllib.parse.urlencode(qparams)}") as resp:
+    async with http.client.get(f"{API_BASE_URL}/api/search?{urllib.parse.urlencode(qparams)}") as resp:
         if resp.ok:
             return [result["result"] for result in await resp.json()]
         return []
