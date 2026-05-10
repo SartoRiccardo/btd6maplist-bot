@@ -30,10 +30,11 @@ class VRulesAccept(discord.ui.View):
     )
     async def on_rules_read(self, interaction: discord.Interaction, _b: discord.ui.Button):
         self.read = True
-        asyncio.create_task(read_rules(self.og_interaction.user))
+        asyncio.create_task(self._read_rules_safe())
         response_coro = interaction.response.send_modal(self.next_step) \
             if isinstance(self.next_step, discord.ui.Modal) else \
-            interaction.response.edit_original_response(
+            interaction.response.send_message(
+                ephemeral=True,
                 content=await self.next_step.content(),
                 embeds=await self.next_step.embeds(),
                 view=await self.next_step.view(),
@@ -43,3 +44,9 @@ class VRulesAccept(discord.ui.View):
             self.delete_og_interaction(),
             response_coro,
         )
+
+    async def _read_rules_safe(self):
+        try:
+            await read_rules(self.og_interaction.user)
+        except Exception:
+            pass

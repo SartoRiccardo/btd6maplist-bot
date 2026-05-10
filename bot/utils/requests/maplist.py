@@ -43,8 +43,9 @@ def multipart_signing_body(
     """Build the canonical signing body for multipart requests.
 
     PHP cannot read php://input for multipart/form-data, so both sides agree on a
-    canonical JSON: sorted non-file fields + SHA-256 hashes of files grouped by
-    field name (alphabetically) and within each group in submission order.
+    canonical JSON: sorted non-file fields (field names kept as-is, including PHP
+    bracket notation like foo[bar]) + SHA-256 hashes of files grouped by field name
+    (alphabetically) and within each group in submission order.
     """
     field_dict: dict[str, str | list[str]] = {}
     for name, value in fields:
@@ -216,9 +217,9 @@ async def submit_map(
     path = "/bot/maps/submit"
     proof_contents = await proof.read()
 
-    user_json = json.dumps({"discord_id": str(user.id), "name": user.name})
     fields: list[tuple[str, str]] = [
-        ("_user", user_json),
+        ("_user[discord_id]", str(user.id)),
+        ("_user[name]", user.name),
         ("code", code),
         ("format_id", str(format_id)),
         ("proposed", str(proposed_diff)),
@@ -266,9 +267,9 @@ async def submit_run(
 ) -> None:
     path = "/bot/completions/submit"
 
-    user_json = json.dumps({"discord_id": str(user.id), "name": user.name})
     fields: list[tuple[str, str]] = [
-        ("_user", user_json),
+        ("_user[discord_id]", str(user.id)),
+        ("_user[name]", user.name),
         ("map", map_id),
         ("format_id", str(run_format)),
     ]
@@ -277,14 +278,14 @@ async def submit_run(
     if no_optimal_hero:
         fields.append(("no_geraldo", "true"))
     if is_lcc and leftover is not None:
-        fields.append(("lcc", json.dumps({"leftover": leftover})))
+        fields.append(("lcc[leftover]", str(leftover)))
     if notes:
         fields.append(("subm_notes", notes))
     for url in vproof_url:
         fields.append(("proof_videos", url))
 
     proof_contents = [await file.read() for file in proofs]
-    file_entries = [("proof_images", content) for content in proof_contents]
+    file_entries = [("proof_images[]", content) for content in proof_contents]
 
     signing_body = multipart_signing_body(fields, file_entries)
 
@@ -293,7 +294,7 @@ async def submit_run(
         form_data.add_field(name, value)
     for file, content in zip(proofs, proof_contents):
         form_data.add_field(
-            "proof_images",
+            "proof_images[]",
             io.BytesIO(content),
             filename=file.filename,
             content_type=file.content_type,
