@@ -144,7 +144,7 @@ class MapInfoCog(CogBase):
                 title=f"{icon} {difficulty}s",
                 description=f"{desc}\n\n{content}",
                 color=EmbedColor.experts,
-                url=f"{WEB_BASE_URL}/experts?difficulty={diffq}",
+                url=f"{WEB_BASE_URL}/maps/expert-list?difficulty={diffq}",
             )
 
         await self.send_list(
@@ -179,7 +179,7 @@ class MapInfoCog(CogBase):
                 title=f"The Maplist",
                 description=f"{content}",
                 color=EmbedColor.maplist,
-                url=f"{WEB_BASE_URL}/list",
+                url=f"{WEB_BASE_URL}/maps/maplist",
             )
 
         await self.send_list(
@@ -239,7 +239,7 @@ class MapInfoCog(CogBase):
                 title=f"{icon} {difficulty}s",
                 description=f"{desc}\n\n{content}",
                 color=EmbedColor.botb,
-                url=f"{WEB_BASE_URL}/best-of-the-best?difficulty={diffq}",
+                url=f"{WEB_BASE_URL}/maps/best-of-the-best?difficulty={diffq}",
             )
 
         await self.send_list(
@@ -296,7 +296,7 @@ class MapInfoCog(CogBase):
                 title=f"{icon} {category}",
                 description=content,
                 color=EmbedColor.np,
-                url=f"{WEB_BASE_URL}/nostalgia-pack?game={diffq}&category={category_q}",
+                url=f"{WEB_BASE_URL}/maps/nostalgia-pack?game={diffq}&category={category_q}",
             )
 
         nostalgia_pack.sort(
@@ -536,7 +536,7 @@ class MapInfoCog(CogBase):
         if len(image_proofs):
             embed.set_image(url=image_proofs[0])
         embed.add_field(
-            name="Player" + ("s" if len(lcc_data["users"]) > 1 else ""),
+            name="Player" + ("s" if len(lcc_data["players"]) > 1 else ""),
             value=ply_list,
         )
 
@@ -594,7 +594,7 @@ class MapInfoCog(CogBase):
                         comp_medals.append(EmjMedals.no_opt_hero)
                     if entry["is_current_lcc"]:
                         comp_medals.append(EmjMedals.lcc)
-                    comp_info = "↓     ↓     ↓     ↓" if i < len(entry["users"])-1 else \
+                    comp_info = "↓     ↓     ↓     ↓" if i < len(entry["players"])-1 else \
                         medals_template.format(comp_format_emj, " ".join(comp_medals))
                     uname = ply["name"]
                     if len(uname) > 20:
