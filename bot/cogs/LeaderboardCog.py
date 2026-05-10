@@ -1,5 +1,4 @@
 import asyncio
-import math
 import discord
 from discord.ext import commands
 from bot.cogs.CogBase import CogBase
@@ -8,12 +7,10 @@ from bot.utils.decos import autodoc
 from bot.types import Format, LbType
 from bot.utils.requests.maplist import get_leaderboard
 from bot.views import VPaginateList
-from bot.utils.formulas import get_page_idxs
 
 
 row_template = "{emoji} `{name: <20}`  |  `{score: <5,}`"
 items_page = 20
-items_page_srv = 50
 placements_emojis = {
     1: f"  {EmjPlacements.top1} ",
     2: f"  {EmjPlacements.top2} ",
@@ -53,27 +50,22 @@ class LeaderboardCog(CogBase):
 
         await interaction.response.defer(ephemeral=hide)
 
-        _si, _ei, req_page_start, req_page_end = get_page_idxs(page, items_page, items_page_srv)
-        lb_pages = await self.request_pages(
-            lb_type,
-            game_format,
-            [pg for pg in range(req_page_start, req_page_end+1)]
-        )
+        lb_pages = await self.request_pages(lb_type, game_format, [page])
 
-        if lb_pages[req_page_start]["meta"]["total"] == 0:
+        if lb_pages[page]["meta"]["total"] == 0:
             return await interaction.edit_original_response(
                 content="❌ No entries!\n"
                         "-# Maybe your page number was too big?"
             )
 
-        client_pages = math.ceil(lb_pages[req_page_start]["meta"]["total"] / items_page)
+        client_pages = lb_pages[page]["meta"]["last_page"]
         view = VPaginateList(
             interaction,
             client_pages,
             page,
             lb_pages,
             items_page,
-            items_page_srv,
+            items_page,
             lambda pages: self.request_pages(lb_type, game_format, pages),
             self.create_lb_message,
             list_key="data",
@@ -90,7 +82,7 @@ class LeaderboardCog(CogBase):
             pages: list[int],
     ) -> dict[int, dict]:
         lb_data = await asyncio.gather(*[
-            get_leaderboard(lb_type, game_format, pg)
+            get_leaderboard(lb_type, game_format, pg, per_page=items_page)
             for pg in pages
         ])
         return {pg: lb_data[i] for i, pg in enumerate(pages)}

@@ -25,7 +25,6 @@ from bot.types import ExpertDifficulty, BotbDifficulty, NostalgiaPackGame
 from bot.utils.emojis import EmjHeros, EmjIcons, EmjMisc, EmjMedals
 from bot.utils.formulas import points
 from bot.utils.colors import EmbedColor
-from bot.utils.formulas import get_page_idxs
 from bot.utils.misc import image_formats
 from typing import get_args
 from collections.abc import Callable
@@ -566,12 +565,10 @@ class MapInfoCog(CogBase):
             pages_view: VPages,
     ) -> MessageContent:
         items_page = 12
-        items_page_srv = 50
-        _si, _ei, req_page_start, req_page_end = get_page_idxs(1, items_page, items_page_srv)
 
         async def request_completions(pages: list[int]):
             lb_data = await asyncio.gather(*[
-                get_completions(map_data["code"], pg)
+                get_completions(map_data["code"], pg, per_page=items_page)
                 for pg in pages
             ])
             return {pg: lb_data[i] for i, pg in enumerate(pages)}
@@ -603,17 +600,15 @@ class MapInfoCog(CogBase):
             return content.strip()
 
         async def load_message() -> MessageContent:
-            pages_to_req = [pg for pg in range(req_page_start, req_page_end+1)]
-            comp_pages = await request_completions(pages_to_req)
-
-            client_pages = math.ceil(comp_pages[req_page_start]["meta"]["total"] / items_page)
+            comp_pages = await request_completions([1])
+            client_pages = comp_pages[1]["meta"]["last_page"]
             view = VPaginateList(
                 interaction,
                 client_pages,
                 1,
                 comp_pages,
                 items_page,
-                items_page_srv,
+                items_page,
                 request_completions,
                 build_message,
                 additional_views=[pages_view],

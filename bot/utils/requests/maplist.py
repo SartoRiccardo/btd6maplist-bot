@@ -84,8 +84,10 @@ async def get_retro_maps() -> list[RetroMap]:
         return (await resp.json())["data"]
 
 
-async def get_completions(map_code: str, page: int) -> CompletionsPage:
+async def get_completions(map_code: str, page: int, per_page: int | None = None) -> CompletionsPage:
     qparams = {"map_code": map_code, "page": page}
+    if per_page is not None:
+        qparams["per_page"] = per_page
     async with http.client.get(f"{API_BASE_URL}/api/completions?{urllib.parse.urlencode(qparams)}") as resp:
         return await resp.json()
 
@@ -120,7 +122,7 @@ async def get_maplist_config() -> MaplistConfig:
         return await resp.json()
 
 
-async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> LeaderboardPage:
+async def get_leaderboard(lb_type: str, game_format: Format, page: int, per_page: int | None = None) -> LeaderboardPage:
     fmt = {
         "Maplist": 1,
         # "Maplist ~ All Versions": 2,
@@ -135,7 +137,7 @@ async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> Leade
         "Black Border": "black_border",
     }.get(lb_type, "points")
 
-    qparams = {"value": value, "page": page}
+    qparams = {"value": value, "page": page, "per_page": per_page} if per_page else {"value": value, "page": page}
     async with http.client.get(f"{API_BASE_URL}/api/formats/{fmt}/leaderboard?{urllib.parse.urlencode(qparams)}") as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
@@ -154,8 +156,10 @@ async def get_maplist_user(uid: int, include: list[str] | None = None) -> Maplis
         return await resp.json()
 
 
-async def get_user_completions(uid: int, page: int = 1) -> CompletionsPage:
+async def get_user_completions(uid: int, page: int = 1, per_page: int | None = None) -> CompletionsPage:
     qparams = {"player_id": uid, "page": page}
+    if per_page is not None:
+        qparams["per_page"] = per_page
     async with http.client.get(f"{API_BASE_URL}/api/completions?{urllib.parse.urlencode(qparams)}") as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
