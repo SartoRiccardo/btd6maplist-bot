@@ -1,13 +1,15 @@
 import math
 
+from bot.utils.requests.maplist_types import MaplistConfig
 
-def points(idx: int, config: dict) -> float:
-    btm = config['points_bottom_map']["value"]
-    top = config['points_top_map']["value"]
-    slp = config['formula_slope']["value"]
-    amt = config['map_count']["value"]
+
+def points(idx: int, config: MaplistConfig) -> float:
+    btm = config['points_bottom_map']
+    top = config['points_top_map']
+    slp = config['formula_slope']
+    amt = config['map_count']
     result = btm * pow(top/btm, pow(1 + ((1-idx)/(amt-1)), slp))
-    round_to = config['decimal_digits']["value"]
+    round_to = config['decimal_digits']
     return round(result, round_to) if round_to else math.floor(result)
 
 

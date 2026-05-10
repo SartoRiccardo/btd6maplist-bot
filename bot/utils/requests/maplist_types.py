@@ -69,41 +69,58 @@ class FullMap(TypedDict):
 
 
 # ---------------------------------------------------------------------------
-# Slim map  (get_experts, get_maplist, get_botb)
-# format_idx is a plain int: position rank for maplist, difficulty index for experts/botb
+# GET /maps  (get_experts, get_maplist, get_botb, get_nostalgia_pack)
 # ---------------------------------------------------------------------------
 
-class SlimMap(TypedDict):
-    code: str
-    name: str
-    format_idx: int
+class RetroGame(TypedDict):
+    id: int
+    game_id: int
+    category_id: int
+    subcategory_id: int
+    game_name: str
+    category_name: str
+    subcategory_name: str
 
 
-# ---------------------------------------------------------------------------
-# Nostalgia pack  (get_nostalgia_pack)
-# format_idx is a nested object here, not an int like SlimMap
-# ---------------------------------------------------------------------------
-
-class NPCategory(TypedDict):
+class MapEntryRetroMap(TypedDict):
     id: int
     name: str
-
-
-class NPFormatIdx(TypedDict):
-    name: str        # original game map name
     sort_order: int
-    category: NPCategory
+    preview_url: str
+    retro_game_id: int
+    game: RetroGame
 
 
-class NPMap(TypedDict):
-    code: str | None  # None/empty = map not present in BTD6
-    format_idx: NPFormatIdx
+class MapEntryMedals(TypedDict):
+    completed: bool
+    black_border: bool
+    no_geraldo: bool
+    current_lcc: bool
+
+
+class MapEntry(TypedDict):
+    code: str | None      # None on retro stub entries (fill_missing_retro=true)
+    name: str
+    r6_start: int | None
+    map_data: str | None
+    map_preview_url: str
+    map_notes: str | None
+    placement_curver: int | None
+    placement_allver: int | None
+    difficulty: int | None
+    optimal_heros: list[str]
+    botb_difficulty: int | None
+    remake_of: int | None  # retro map ID
+    deleted_on: str | None
+    is_verified: bool
+    retro_map: MapEntryRetroMap | None  # present when format_id=11 or remake_of != null
 
 
 # ---------------------------------------------------------------------------
 # Retro maps  (get_retro_maps)
 # as_list=True  -> list[RetroMap]  (game key injected by the function itself)
 # as_list=False -> dict[str, dict[str, list[RetroMap]]]  (raw API shape)
+# TODO: update when GET /maps/retro is migrated
 # ---------------------------------------------------------------------------
 
 class RetroMap(TypedDict):
@@ -150,16 +167,28 @@ class FormatData(TypedDict):
 # Config  (get_maplist_config)
 # ---------------------------------------------------------------------------
 
-class ConfigEntry(TypedDict):
-    value: Any  # int | float | None depending on the key
-
-
 class MaplistConfig(TypedDict):
-    map_count: ConfigEntry
-    points_bottom_map: ConfigEntry
-    points_top_map: ConfigEntry
-    formula_slope: ConfigEntry
-    decimal_digits: ConfigEntry
+    points_top_map: float
+    points_bottom_map: float
+    formula_slope: float
+    points_extra_lcc: float
+    points_multi_gerry: float
+    points_multi_bb: float
+    decimal_digits: int
+    map_count: int
+    current_btd6_ver: int
+    exp_points_casual: float
+    exp_points_medium: float
+    exp_points_high: float
+    exp_points_true: float
+    exp_points_extreme: float
+    exp_nogerry_points_casual: float
+    exp_nogerry_points_medium: float
+    exp_nogerry_points_high: float
+    exp_nogerry_points_true: float
+    exp_nogerry_points_extreme: float
+    exp_bb_multi: float
+    exp_lcc_extra: float
 
 
 # ---------------------------------------------------------------------------

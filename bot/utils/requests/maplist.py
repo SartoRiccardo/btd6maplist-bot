@@ -7,7 +7,7 @@ import bot.utils.http
 from bot.exceptions import MaplistResNotFound, ErrorStatusCode, BadRequest
 from bot.types import Format
 from bot.utils.requests.maplist_types import (
-    FullMap, SlimMap, NPMap, RetroMap,
+    FullMap, MapEntry, RetroMap,
     MapCompletionsPage, FormatData, MaplistConfig,
     LeaderboardPage, MaplistUser, UserCompletionsPage,
     LinkedRoleUpdate,
@@ -70,24 +70,24 @@ async def get_maplist_map(map_id: str) -> FullMap:
         return await resp.json()
 
 
-async def get_experts() -> list[SlimMap]:
-    async with http.client.get(f"{API_BASE_URL}/maps?format=51") as resp:
-        return await resp.json()
+async def get_experts() -> list[MapEntry]:
+    async with http.client.get(f"{API_BASE_URL}/maps?format_id=51") as resp:
+        return (await resp.json())["data"]
 
 
-async def get_maplist() -> list[SlimMap]:
-    async with http.client.get(f"{API_BASE_URL}/maps?format=1") as resp:
-        return await resp.json()
+async def get_maplist() -> list[MapEntry]:
+    async with http.client.get(f"{API_BASE_URL}/maps?format_id=1") as resp:
+        return (await resp.json())["data"]
 
 
-async def get_nostalgia_pack(game: int) -> list[NPMap]:
-    async with http.client.get(f"{API_BASE_URL}/maps?format=11&filter={game}") as resp:
-        return await resp.json()
+async def get_nostalgia_pack(game: int) -> list[MapEntry]:
+    async with http.client.get(f"{API_BASE_URL}/maps?format_id=11&format_subfilter={game}") as resp:
+        return (await resp.json())["data"]
 
 
-async def get_botb(difficulty: int) -> list[SlimMap]:
-    async with http.client.get(f"{API_BASE_URL}/maps?format=52&filter={difficulty}") as resp:
-        return await resp.json()
+async def get_botb(difficulty: int) -> list[MapEntry]:
+    async with http.client.get(f"{API_BASE_URL}/maps?format_id=52&format_subfilter={difficulty}") as resp:
+        return (await resp.json())["data"]
 
 
 async def get_retro_maps(as_list: bool = True) -> list[RetroMap] | dict[str, dict[str, list[RetroMap]]]:

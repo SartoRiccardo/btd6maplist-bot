@@ -13,6 +13,7 @@ from bot.utils.requests.maplist import (
     get_botb,
     get_nostalgia_pack,
 )
+from bot.utils.requests.maplist_types import FullMap, MapCompletion, MaplistConfig
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
 from bot.utils.models import MessageContent, LazyMessageContent
@@ -429,8 +430,8 @@ class MapInfoCog(CogBase):
 
     @staticmethod
     def get_map_message(
-            map_data: dict,
-            ml_config: dict,
+            map_data: FullMap,
+            ml_config: MaplistConfig,
             visible_formats: list[int],
     ) -> MessageContent:
         description = ""
@@ -439,13 +440,13 @@ class MapInfoCog(CogBase):
 
         diff_parts = []
         if map_data["placement_curver"] is not None and \
-                map_data["placement_curver"] <= ml_config['map_count']["value"] and \
+                map_data["placement_curver"] <= ml_config['map_count'] and \
                 1 in visible_formats:
             diff_parts.append(
                 f"{EmjIcons.curver} #{map_data['placement_curver']} ({points(map_data['placement_curver'], ml_config)}pt)"
             )
         if map_data["placement_allver"] is not None and \
-                map_data["placement_allver"] <= ml_config['map_count']["value"] and \
+                map_data["placement_allver"] <= ml_config['map_count'] and \
                 2 in visible_formats:
             diff_parts.append(
                 f"{EmjIcons.allver} #{map_data['placement_allver']} ({points(map_data['placement_allver'], ml_config)}pt)"
@@ -503,8 +504,8 @@ class MapInfoCog(CogBase):
 
     @staticmethod
     def get_lcc_message(
-            map_data: dict,
-            lcc_data: dict | None,
+            map_data: FullMap,
+            lcc_data: MapCompletion | None,
     ) -> MessageContent:
         if lcc_data is None:
             return MessageContent(content="-# No LCCs for this map!")
@@ -552,7 +553,7 @@ class MapInfoCog(CogBase):
 
     @staticmethod
     def get_r6start_message(
-            map_data: dict,
+            map_data: FullMap,
     ) -> MessageContent:
         if map_data["r6_start"] is None:
             return MessageContent(content="-# No R6 Start info for this map!")
@@ -564,7 +565,7 @@ class MapInfoCog(CogBase):
     @staticmethod
     def get_completions_message(
             interaction: discord.Interaction,
-            map_data: dict,
+            map_data: FullMap,
             pages_view: VPages,
     ) -> MessageContent:
         items_page = 12
