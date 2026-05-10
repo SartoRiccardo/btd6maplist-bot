@@ -6,6 +6,12 @@ import discord
 import bot.utils.http
 from bot.exceptions import MaplistResNotFound, ErrorStatusCode, BadRequest
 from bot.types import Format
+from bot.utils.requests.maplist_types import (
+    FullMap, SlimMap, NPMap, RetroMap,
+    MapCompletionsPage, FormatData, MaplistConfig,
+    LeaderboardPage, MaplistUser, UserCompletionsPage,
+    LinkedRoleUpdate,
+)
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, utils
 import json
@@ -55,7 +61,7 @@ def finish_sign(current: hashes.Hash) -> str:
     return base64.b64encode(signature).decode()
 
 
-async def get_maplist_map(map_id: str) -> dict:
+async def get_maplist_map(map_id: str) -> FullMap:
     async with http.client.get(f"{API_BASE_URL}/maps/{map_id.upper()}") as resp:
         if resp.status == 404:
             raise MaplistResNotFound("map")
@@ -64,27 +70,27 @@ async def get_maplist_map(map_id: str) -> dict:
         return await resp.json()
 
 
-async def get_experts() -> list:
+async def get_experts() -> list[SlimMap]:
     async with http.client.get(f"{API_BASE_URL}/maps?format=51") as resp:
         return await resp.json()
 
 
-async def get_maplist() -> list:
+async def get_maplist() -> list[SlimMap]:
     async with http.client.get(f"{API_BASE_URL}/maps?format=1") as resp:
         return await resp.json()
 
 
-async def get_nostalgia_pack(game: int) -> list:
+async def get_nostalgia_pack(game: int) -> list[NPMap]:
     async with http.client.get(f"{API_BASE_URL}/maps?format=11&filter={game}") as resp:
         return await resp.json()
 
 
-async def get_botb(difficulty: int) -> list:
+async def get_botb(difficulty: int) -> list[SlimMap]:
     async with http.client.get(f"{API_BASE_URL}/maps?format=52&filter={difficulty}") as resp:
         return await resp.json()
 
 
-async def get_retro_maps(as_list: bool = True) -> list:
+async def get_retro_maps(as_list: bool = True) -> list[RetroMap] | dict[str, dict[str, list[RetroMap]]]:
     async with http.client.get(f"{API_BASE_URL}/maps/retro") as resp:
         maps = await resp.json()
         if not as_list:
@@ -97,26 +103,26 @@ async def get_retro_maps(as_list: bool = True) -> list:
         ]
 
 
-async def get_map_completions(map_code: str, page: int) -> list:
+async def get_map_completions(map_code: str, page: int) -> MapCompletionsPage:
     qparams = {page: page}
     async with http.client.get(f"{API_BASE_URL}/maps/{map_code}/completions?{urllib.parse.urlencode(qparams)}") as resp:
         return await resp.json()
 
 
-async def get_formats() -> list[dict]:
+async def get_formats() -> list[FormatData]:
     qparams = {"signature": sign(b"")}
     async with http.client.get(f"{API_BASE_URL}/formats/bot?{urllib.parse.urlencode(qparams)}") as resp:
         return await resp.json()
 
 
-async def get_maplist_config() -> dict:
+async def get_maplist_config() -> MaplistConfig:
     async with http.client.get(f"{API_BASE_URL}/config") as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
         return await resp.json()
 
 
-async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> dict:
+async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> LeaderboardPage:
     fmt = {
         "Maplist": "1",
         # "Maplist ~ All Versions": "2",
@@ -136,7 +142,7 @@ async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> dict:
         return await resp.json()
 
 
-async def get_maplist_user(uid: int, no_load_oak: bool = False) -> dict:
+async def get_maplist_user(uid: int, no_load_oak: bool = False) -> MaplistUser:
     message = f"{uid}{no_load_oak}"
     signature = sign(message.encode())
     qparams = {"signature": signature, "no_load_oak": str(no_load_oak)}
@@ -149,7 +155,7 @@ async def get_maplist_user(uid: int, no_load_oak: bool = False) -> dict:
         return await resp.json()
 
 
-async def get_user_completions(uid: int, page: int = 1) -> dict:
+async def get_user_completions(uid: int, page: int = 1) -> UserCompletionsPage:
     qparams = {page: page}
     async with http.client.get(f"{API_BASE_URL}/users/{uid}/completions?{urllib.parse.urlencode(qparams)}") as resp:
         if not resp.ok:
@@ -377,7 +383,7 @@ async def search_maps(query: str) -> list[dict]:
         return []
 
 
-async def get_linked_role_updates() -> list[dict]:
+async def get_linked_role_updates() -> list[LinkedRoleUpdate]:
     qparams = {"signature": sign(b"")}
     async with http.client.get(f"{API_BASE_URL}/roles/achievement/updates/bot?{urllib.parse.urlencode(qparams)}") as resp:
         if not resp.ok:
