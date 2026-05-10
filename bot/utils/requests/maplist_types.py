@@ -271,26 +271,6 @@ class MaplistUser(TypedDict):
     permissions: list[UserPermission]
 
 
-# ---------------------------------------------------------------------------
-# User completions  (get_user_completions)
-# ---------------------------------------------------------------------------
-
-class UserCompletionMap(TypedDict):
-    name: str
-    code: str
-
-
-class UserCompletion(TypedDict):
-    format: int
-    no_geraldo: bool
-    current_lcc: bool
-    black_border: bool
-    map: UserCompletionMap
-
-
-class UserCompletionsPage(TypedDict):
-    total: int
-    completions: list[UserCompletion]
 
 
 # ---------------------------------------------------------------------------

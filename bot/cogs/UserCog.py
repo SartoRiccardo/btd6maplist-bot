@@ -140,11 +140,11 @@ class UserCog(CogBase):
                       "—————————  + —————————\n"
             medal_spots = 3
             for i, entry in enumerate(entries):
-                format_emj = EmjIcons.format(entry["format"])
+                format_emj = EmjIcons.format(entry["format_id"])
                 comp_medals = []
-                if entry["format"] <= 50 and entry["no_geraldo"]:
+                if entry["format_id"] <= 50 and entry["no_geraldo"]:
                     comp_medals.append(EmjMedals.no_opt_hero)
-                if entry["current_lcc"]:
+                if entry["is_current_lcc"]:
                     comp_medals.append(EmjMedals.lcc)
                 comp_medals.append(EmjMedals.bb if entry["black_border"] else EmjMedals.win)
                 for _ in range(len(comp_medals), medal_spots):
@@ -160,7 +160,7 @@ class UserCog(CogBase):
             pages_to_req = [pg for pg in range(req_page_start, req_page_end+1)]
             comp_pages = await request_completions(pages_to_req)
 
-            client_pages = math.ceil(comp_pages[req_page_start]["total"] / items_page)
+            client_pages = math.ceil(comp_pages[req_page_start]["meta"]["total"] / items_page)
             view = VPaginateList(
                 interaction,
                 client_pages,
@@ -171,7 +171,7 @@ class UserCog(CogBase):
                 request_completions,
                 build_message,
                 additional_views=[pages_view],
-                list_key="completions",
+                list_key="data",
             )
             return MessageContent(
                 content=view.message_on_page(1),

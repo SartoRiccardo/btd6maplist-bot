@@ -9,7 +9,7 @@ from bot.types import Format
 from bot.utils.requests.maplist_types import (
     FullMap, MapEntry, RetroMap,
     CompletionEntry, CompletionsPage, FormatData, MaplistConfig,
-    LeaderboardPage, MaplistUser, UserCompletionsPage,
+    LeaderboardPage, MaplistUser,
     LinkedRoleUpdate,
 )
 from cryptography.hazmat.primitives import hashes
@@ -154,9 +154,9 @@ async def get_maplist_user(uid: int, no_load_oak: bool = False) -> MaplistUser:
         return await resp.json()
 
 
-async def get_user_completions(uid: int, page: int = 1) -> UserCompletionsPage:
-    qparams = {page: page}
-    async with http.client.get(f"{API_BASE_URL}/users/{uid}/completions?{urllib.parse.urlencode(qparams)}") as resp:
+async def get_user_completions(uid: int, page: int = 1) -> CompletionsPage:
+    qparams = {"player_id": uid, "page": page}
+    async with http.client.get(f"{API_BASE_URL}/completions?{urllib.parse.urlencode(qparams)}") as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
         return await resp.json()
