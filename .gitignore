@@ -2,7 +2,6 @@
 data
 *.key
 *.pem
-**/emojis.py
 
 # Discord
 config.py
