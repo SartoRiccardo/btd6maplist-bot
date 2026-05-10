@@ -90,17 +90,9 @@ async def get_botb(difficulty: int) -> list[MapEntry]:
         return (await resp.json())["data"]
 
 
-async def get_retro_maps(as_list: bool = True) -> list[RetroMap] | dict[str, dict[str, list[RetroMap]]]:
+async def get_retro_maps() -> list[RetroMap]:
     async with http.client.get(f"{API_BASE_URL}/maps/retro") as resp:
-        maps = await resp.json()
-        if not as_list:
-            return maps
-        return [
-            {**map_data, "game": game}
-            for game in maps
-            for category in maps[game]
-            for map_data in maps[game][category]
-        ]
+        return (await resp.json())["data"]
 
 
 async def get_map_completions(map_code: str, page: int) -> MapCompletionsPage:

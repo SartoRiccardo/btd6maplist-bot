@@ -118,15 +118,16 @@ class MapEntry(TypedDict):
 
 # ---------------------------------------------------------------------------
 # Retro maps  (get_retro_maps)
-# as_list=True  -> list[RetroMap]  (game key injected by the function itself)
-# as_list=False -> dict[str, dict[str, list[RetroMap]]]  (raw API shape)
-# TODO: update when GET /maps/retro is migrated
 # ---------------------------------------------------------------------------
 
 class RetroMap(TypedDict):
-    name: str
     id: int
-    game: str  # injected by get_retro_maps; the outer game key from the API dict
+    name: str
+    sort_order: int
+    preview_url: str | None
+    retro_game_id: int
+    deleted_at: str | None
+    game: RetroGame
 
 
 # ---------------------------------------------------------------------------
