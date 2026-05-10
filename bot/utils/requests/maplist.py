@@ -122,10 +122,12 @@ async def get_maplist_config() -> MaplistConfig:
 
 async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> LeaderboardPage:
     fmt = {
-        "Maplist": "1",
-        # "Maplist ~ All Versions": "2",
-        "Expert List": "51",
-    }.get(game_format, "current")
+        "Maplist": 1,
+        # "Maplist ~ All Versions": 2,
+        "Expert List": 51,
+        "Nostalgia Pack": 11,
+        "Best of the Best": 52,
+    }.get(game_format, 1)
     value = {
         "Points": "points",
         "LCCs": "lccs",
@@ -133,8 +135,8 @@ async def get_leaderboard(lb_type: str, game_format: Format, page: int) -> Leade
         "Black Border": "black_border",
     }.get(lb_type, "points")
 
-    qstring = f"value={value}&format={fmt}&page={page}"
-    async with http.client.get(f"{API_BASE_URL}/maps/leaderboard?{qstring}") as resp:
+    qparams = {"value": value, "page": page}
+    async with http.client.get(f"{API_BASE_URL}/formats/{fmt}/leaderboard?{urllib.parse.urlencode(qparams)}") as resp:
         if not resp.ok:
             raise ErrorStatusCode(resp.status)
         return await resp.json()

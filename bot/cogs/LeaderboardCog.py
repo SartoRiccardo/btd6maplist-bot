@@ -60,13 +60,13 @@ class LeaderboardCog(CogBase):
             [pg for pg in range(req_page_start, req_page_end+1)]
         )
 
-        if lb_pages[req_page_start]["pages"] == 0:
+        if lb_pages[req_page_start]["meta"]["total"] == 0:
             return await interaction.edit_original_response(
                 content="❌ No entries!\n"
                         "-# Maybe your page number was too big?"
             )
 
-        client_pages = math.ceil(lb_pages[req_page_start]["total"] / items_page)
+        client_pages = math.ceil(lb_pages[req_page_start]["meta"]["total"] / items_page)
         view = VPaginateList(
             interaction,
             client_pages,
@@ -76,7 +76,7 @@ class LeaderboardCog(CogBase):
             items_page_srv,
             lambda pages: self.request_pages(lb_type, game_format, pages),
             self.create_lb_message,
-            list_key="entries",
+            list_key="data",
         )
         await interaction.edit_original_response(
             content=self.create_lb_message(view.get_needed_rows(page, lb_pages)),
@@ -102,7 +102,7 @@ class LeaderboardCog(CogBase):
             "———————————————-   +   —————",
         ]
         for entry in entries:
-            plcmt = placements_emojis.get(entry["position"], f"`{entry['position']: >3}`")
+            plcmt = placements_emojis.get(entry["placement"], f"`{entry['placement']: >3}`")
             rows.append(row_template.format(
                 emoji=plcmt,
                 name=entry["user"]["name"],

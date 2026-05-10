@@ -229,20 +229,15 @@ class MaplistConfig(TypedDict):
 # Leaderboard  (get_leaderboard)
 # ---------------------------------------------------------------------------
 
-class LeaderboardEntryUser(TypedDict):
-    name: str
-
-
 class LeaderboardEntry(TypedDict):
-    position: int
-    user: LeaderboardEntryUser
     score: float
+    placement: int
+    user: MapUser
 
 
 class LeaderboardPage(TypedDict):
-    pages: int
-    total: int
-    entries: list[LeaderboardEntry]
+    data: list[LeaderboardEntry]
+    meta: CompletionsMeta
 
 
 # ---------------------------------------------------------------------------
