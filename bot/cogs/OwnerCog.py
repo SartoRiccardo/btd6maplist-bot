@@ -1,7 +1,8 @@
+import os
 import discord
 from discord.ext import commands
 from typing import Literal
-import config
+from bot.utils.env_transforms import get_co_owner_ids
 
 
 SUCCESS_REACTION = '\N{THUMBS UP SIGN}'
@@ -9,7 +10,7 @@ SUCCESS_REACTION = '\N{THUMBS UP SIGN}'
 
 def is_owner():
     async def predicate(ctx: discord.ext.commands.Context):
-        return ctx.author.id in config.CO_OWNER_IDS or await ctx.bot.is_owner(ctx.author)
+        return ctx.author.id in get_co_owner_ids() or await ctx.bot.is_owner(ctx.author)
     return discord.ext.commands.check(predicate)
 
 
@@ -62,7 +63,7 @@ class OwnerCog(commands.Cog, name="owner"):
             synced = await ctx.bot.tree.sync(guild=ctx.guild)
             where_str = "here"
         elif where == "mlist":
-            synced = await ctx.bot.tree.sync(guild=discord.Object(config.MAPLIST_GID))
+            synced = await ctx.bot.tree.sync(guild=discord.Object(int(os.environ["MAPLIST_GID"])))
             where_str = "in the Maplist"
         else:
             synced = await ctx.bot.tree.sync()

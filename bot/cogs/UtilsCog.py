@@ -1,7 +1,8 @@
+import os
 import discord
-from config import APP_ID, GH_REPO, BOT_NAME, EMBED_CLR, WEB_BASE_URL
 from discord.ext import commands
 from bot.cogs.CogBase import CogBase
+from bot.utils.env_transforms import get_embed_color
 
 
 class UtilsCog(CogBase):
@@ -64,10 +65,10 @@ class UtilsCog(CogBase):
     @discord.app_commands.command(name="github",
                                   description="Get the bot's repo")
     async def cmd_github(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_message(GH_REPO)
+        await interaction.response.send_message(os.environ.get("GH_REPO", ""))
 
     @discord.app_commands.command(name="invite",
-                                  description=f"Invite {BOT_NAME} to your server!")
+                                  description=f"Invite {os.environ.get('BOT_NAME', 'the bot')} to your server!")
     async def cmd_invite(self, interaction: discord.Interaction) -> None:
         perms = discord.Permissions(
             embed_links=True,
@@ -76,7 +77,7 @@ class UtilsCog(CogBase):
             add_reactions=True,
         )
         url = f"https://discord.com/api/oauth2/authorize?" \
-              f"client_id={APP_ID}" \
+              f"client_id={os.environ['APP_ID']}" \
               f"&permissions={perms.value}" \
               f"&scope=bot" \
               f"&integration_type=0"
@@ -88,16 +89,17 @@ class UtilsCog(CogBase):
                                   description="General information about the bot.")
     async def cmd_info(self, interaction: discord.Interaction) -> None:
         lr = int(self.bot.last_restart.timestamp())
+        gh_repo = os.environ.get("GH_REPO", "")
         embed = discord.Embed(
-            title=BOT_NAME,
+            title=os.environ["BOT_NAME"],
             description=f"- Version: **__{self.bot.version}__**\n"
                         f"- Last Restart: <t:{lr}> (<t:{lr}:R>)\n" +
                         (
-                            f"Found a bug? Yell at the maintainer or make [an issue on Github]({GH_REPO})!"
-                            if len(GH_REPO) else ""
+                            f"Found a bug? Yell at the maintainer or make [an issue on Github]({gh_repo})!"
+                            if len(gh_repo) else ""
                         ) +
                         f"\n\n-# Bot and website by __Chime__ (@chimenea.mo)",
-            color=EMBED_CLR,
+            color=get_embed_color(),
         )
         await interaction.response.send_message(embed=embed)
 
@@ -106,7 +108,7 @@ class UtilsCog(CogBase):
     async def cmd_website(self, interaction: discord.Interaction) -> None:
         oak_cmd = await self.bot.get_app_command("oak")
         await interaction.response.send_message(
-            content=f"→ → → {WEB_BASE_URL} ← ← ←\n"
+            content=f"→ → → {os.environ['WEB_BASE_URL']} ← ← ←\n"
                     f"Wanna help make the website prettier? Set your own BTD6 profile "
                     f"picture with the </oak:{oak_cmd.id}> command!"
         )

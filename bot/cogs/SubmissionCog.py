@@ -20,7 +20,7 @@ from bot.utils.requests.maplist import (
 from bot.views import VRulesAccept, VRunFormatSelect
 from bot.views.modals import MMapSubmission, MRunSubmission
 from bot.exceptions import BadRequest, MaplistResNotFound
-from config import WEB_BASE_URL
+import os
 from bot.utils.misc import image_formats, max_upload_size_mb
 from bot.utils.models import MessageContent
 from collections.abc import Awaitable
@@ -63,7 +63,7 @@ async def ctxm_accept_submission(interaction: discord.Interaction, message: disc
     try:
         await accept_run(interaction.user, run_id)
         response = "✅ Completion accepted!\n" \
-                   f"You can edit it [on the website]({WEB_BASE_URL}/completions/{run_id}) if needed."
+                   f"You can edit it [on the website]({os.environ['WEB_BASE_URL']}/completions/{run_id}) if needed."
     except BadRequest:
         response = "That completion was already accepted!"
     except MaplistResNotFound:

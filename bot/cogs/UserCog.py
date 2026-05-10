@@ -17,7 +17,8 @@ from bot.utils.requests.ninjakiwi import get_btd6_user
 from bot.views import VPages, VPaginateList
 from bot.utils.models import MessageContent, LazyMessageContent
 from bot.exceptions import MaplistResNotFound
-from config import EMBED_CLR, WEB_BASE_URL
+import os
+from bot.utils.env_transforms import get_embed_color
 from bot.utils.emojis import EmjMedals, EmjIcons, EmjPlacements, EmjMisc
 
 
@@ -192,13 +193,13 @@ class UserCog(CogBase):
         # Never miss a chance to be cooler than others
         if user.id == 1077309729942024302:
             description += "- **Bots Created:** This one and some others\n" \
-                           f"- **Websites Created:** [{WEB_BASE_URL.split('//', 1)[1]}]({WEB_BASE_URL})"
+                           f"- **Websites Created:** [{os.environ['WEB_BASE_URL'].split('//', 1)[1]}]({os.environ['WEB_BASE_URL']})"
 
         something = len(description) > 0
 
         embed = discord.Embed(
             title=user.display_name,
-            color=EMBED_CLR,
+            color=get_embed_color(),
             description=description.strip(),
         )
         if profile["medals"]["wins"] > 0:

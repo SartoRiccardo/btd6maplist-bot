@@ -3,10 +3,10 @@ import discord
 import logging
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
 import bot.utils.http
 from bot import __version__
 from discord.ext import commands
-from config import TOKEN, APP_ID, DATA_PATH, WEB_BASE_URL
 from bot.utils.colors import purple
 
 
@@ -18,9 +18,9 @@ class MaplistBot(commands.Bot):
         super().__init__(
             command_prefix=commands.when_mentioned_or(",,,"),
             intents=intents,
-            application_id=APP_ID,
+            application_id=int(os.environ["APP_ID"]),
             activity=discord.CustomActivity(
-                name=f"{WEB_BASE_URL.split('//', 1)[1]}",
+                name=f"{os.environ['WEB_BASE_URL'].split('//', 1)[1]}",
             ),
         )
         self.remove_command("help")
@@ -93,7 +93,9 @@ class MaplistBot(commands.Bot):
 
 if __name__ == '__main__':
     os.chdir(os.path.abspath(os.path.dirname(__file__)))
-    data_path = Path(DATA_PATH)
+    load_dotenv(".env")
+    load_dotenv(".env.local", override=True)
+    data_path = Path(os.path.expanduser(os.environ.get("DATA_PATH", "~/data")))
     data_path.mkdir(parents=True, exist_ok=True)
 
-    MaplistBot().run(TOKEN, log_level=logging.ERROR)
+    MaplistBot().run(os.environ["BOT_TOKEN"], log_level=logging.ERROR)

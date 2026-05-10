@@ -23,14 +23,6 @@ MAPLIST_ROLES: dict[str, list[int]] = {
     "expert_mod": [],
     "list_mod": [],
 }
-WH_RUN_SUBMISSION_IDS: dict[str, list[int]] = {
-    "expert": [],
-    "list": [],
-}
-WH_MAP_SUBMISSION_IDS: dict[str, list[int]] = {
-    "expert": [],
-    "list": [],
-}
 MAPLIST_VOTE_CH = {  # Ping channel ID, Ping role ID
     "Maplist": (1070699330194911334, 1292139693781155850),
     "Expert List": (1070699307432427550, 1292139490445492324),

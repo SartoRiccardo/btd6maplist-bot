@@ -4,7 +4,6 @@ import os
 import aiohttp.hdrs
 import discord
 import bot.utils.http
-from config import API_BASE_URL, API_BASE_PUBLIC_URL, DATA_PATH
 from bot.exceptions import MaplistResNotFound, ErrorStatusCode, BadRequest
 from bot.types import Format
 from cryptography.hazmat.primitives import hashes
@@ -15,7 +14,8 @@ import base64
 import urllib.parse
 
 http = bot.utils.http
-os.makedirs(os.path.join(DATA_PATH, "tmp"), exist_ok=True)
+API_BASE_URL = os.environ["API_BASE_URL"]
+os.makedirs(os.path.join(os.path.expanduser(os.environ.get("DATA_PATH", "~/data")), "tmp"), exist_ok=True)
 
 
 # Signature methods & vulnerabilities: https://en.wikipedia.org/wiki/Digital_signature#Method
@@ -340,7 +340,7 @@ async def reject_run(who: discord.User, run_id: int) -> None:
 
 def get_banner_medals_url(banner_url: str, medals: dict) -> str:
     banner_name = banner_url.split("/")[-1]
-    return f"{API_BASE_PUBLIC_URL}/img/medal-banner/{banner_name}?{urllib.parse.urlencode(medals)}"
+    return f"{os.environ['API_BASE_PUBLIC_URL']}/img/medal-banner/{banner_name}?{urllib.parse.urlencode(medals)}"
 
 
 async def reject_map(who: discord.User, message_id: int) -> None:

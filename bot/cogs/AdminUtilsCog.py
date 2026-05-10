@@ -4,7 +4,9 @@ from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
 from datetime import datetime, timedelta
 from typing import Any, Literal
-from config import MAPLIST_VOTE_CH, MAPLIST_GID, MAPLIST_ROLES, NK_PREVIEW_PROXY
+import os
+from config import MAPLIST_VOTE_CH, MAPLIST_ROLES
+from bot.utils.env_transforms import get_nk_preview_proxy
 from bot.utils.colors import EmbedColor
 from bot.utils.discordutils import roles_overlap
 from bot.utils.requests.ninjakiwi import get_btd6_custom_map
@@ -87,7 +89,7 @@ class AdminUtilsCog(CogBase):
         )
         await message.unpin()
 
-    @discord.app_commands.guilds(MAPLIST_GID)
+    @discord.app_commands.guilds(int(os.environ["MAPLIST_GID"]))
     @discord.app_commands.command(
         name="map-vote",
         description="Call other moderators to vote on a map",
@@ -134,7 +136,7 @@ class AdminUtilsCog(CogBase):
                 ephemeral=True,
             )
 
-        embed_url = map_preview.url if map_preview is not None else NK_PREVIEW_PROXY(map_code)
+        embed_url = map_preview.url if map_preview is not None else get_nk_preview_proxy(map_code)
 
         description = f"<@{interaction.user.id}> wants you to vote on this map!"
         if map_code is not None:
@@ -151,7 +153,7 @@ class AdminUtilsCog(CogBase):
             embed=embed,
             allowed_mentions=discord.AllowedMentions.none() if silent else discord.AllowedMentions.all(),
         )
-        msg_url = f"https://discord.com/channels/{MAPLIST_GID}/{vote_ch_id}/{message.id}"
+        msg_url = f"https://discord.com/channels/{os.environ['MAPLIST_GID']}/{vote_ch_id}/{message.id}"
 
         await interaction.response.send_message(
             content=f"You successfully [called a vote]({msg_url})!",

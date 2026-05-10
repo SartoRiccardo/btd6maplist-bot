@@ -17,7 +17,8 @@ from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
 from bot.utils.models import MessageContent, LazyMessageContent
 from bot.views import VPages, VPaginateList
-from config import WEB_BASE_URL, EMBED_CLR, NK_PREVIEW_PROXY
+import os
+from bot.utils.env_transforms import get_embed_color, get_nk_preview_proxy
 from bot.types import ExpertDifficulty, BotbDifficulty, NostalgiaPackGame
 from bot.utils.emojis import EmjHeros, EmjIcons, EmjMisc, EmjMedals
 from bot.utils.formulas import points
@@ -27,6 +28,8 @@ from bot.utils.misc import image_formats
 from typing import get_args
 from collections.abc import Callable
 from bot.utils.discordutils import composite_views
+
+WEB_BASE_URL = os.environ["WEB_BASE_URL"]
 
 
 class MapInfoCog(CogBase):
@@ -377,7 +380,7 @@ class MapInfoCog(CogBase):
         visible_formats = [f["id"] for f in ml_formats if not f["hidden"]]
 
         if map_data["map_preview_url"].startswith("https://data.ninjakiwi.com"):
-            map_data["map_preview_url"] = NK_PREVIEW_PROXY(map_data["code"])
+            map_data["map_preview_url"] = get_nk_preview_proxy(map_data["code"])
 
         max_lcc = map_data["lccs"][0] if len(map_data["lccs"]) else None
         for lcc in map_data["lccs"]:
@@ -472,7 +475,7 @@ class MapInfoCog(CogBase):
                            f"# {' '.join(hero_emojis)}\n"
 
         embed = discord.Embed(
-            color=EMBED_CLR,
+            color=get_embed_color(),
             title=map_data["name"],
             description=description,
             url=f"{WEB_BASE_URL}/map/{map_data['code']}",
@@ -525,7 +528,7 @@ class MapInfoCog(CogBase):
 
         map_url = f"{WEB_BASE_URL}/map/{map_data['code']}"
         embed = discord.Embed(
-            color=EMBED_CLR,
+            color=get_embed_color(),
             title="Least Cash CHIMPS",
             description=f"{format_emj} / {medals_str}\n"
                         f"Saveup: {EmjMisc.cash} **{lcc_data['lcc']['leftover']:,}**",

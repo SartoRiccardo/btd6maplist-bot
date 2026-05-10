@@ -2,7 +2,6 @@ import asyncio
 import os
 import aiohttp_client_cache
 import cryptography.hazmat.primitives.asymmetric.rsa
-from config import DATA_PATH, PRIVKEY_PATH, PRIVKEY_PSWD
 from cryptography.hazmat.primitives import serialization
 from bot.utils.colors import purple
 
@@ -13,7 +12,7 @@ private_key: cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey | None 
 
 async def init_http_client():
     cache = aiohttp_client_cache.SQLiteBackend(
-        cache_name=os.path.join(DATA_PATH, ".cache", "aiohttp-requests.db"),
+        cache_name=os.path.join(os.path.expanduser(os.environ.get("DATA_PATH", "~/data")), ".cache", "aiohttp-requests.db"),
         expire_after=60*5,
         urls_expire_after={
             "data.ninjakiwi.com": 3600 * 24 * 7,
@@ -24,10 +23,11 @@ async def init_http_client():
     async def init_session():
         global client, private_key
 
-        with open(PRIVKEY_PATH, "rb") as fin:
+        with open(os.environ.get("PRIVKEY_PATH", "btd6maplist-bot.pem"), "rb") as fin:
+            _privkey_pswd = os.environ.get("PRIVKEY_PSWD", "")
             private_key = serialization.load_pem_private_key(
                 fin.read(),
-                password=PRIVKEY_PSWD,
+                password=_privkey_pswd.encode() if _privkey_pswd else None,
             )
             print(f"{purple('[HTTP]')} Loaded private key")
 
