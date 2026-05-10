@@ -383,10 +383,8 @@ class MapInfoCog(CogBase):
         if map_data["map_preview_url"].startswith("https://data.ninjakiwi.com"):
             map_data["map_preview_url"] = get_nk_preview_proxy(map_data["code"])
 
-        max_lcc = map_data["lccs"][0] if len(map_data["lccs"]) else None
-        for lcc in map_data["lccs"]:
-            if lcc["lcc"]["leftover"] > max_lcc["lcc"]["leftover"]:
-                max_lcc = lcc
+        # TODO: fetch LCC from completions endpoint once get_map_completions is migrated
+        max_lcc = None
 
         pages = []
         select_pages = [
@@ -463,9 +461,9 @@ class MapInfoCog(CogBase):
             diff_parts.append(
                 f"{EmjIcons.botb_diff_by_index(map_data['botb_difficulty'])} {diff_str}"
             )
-        if map_data["remake_of"] is not None and 11 in visible_formats:
+        if map_data["retro_map"] is not None and 11 in visible_formats:
             diff_parts.append(
-                f"{EmjIcons.game(map_data['remake_of']['game']['id'])} {map_data['remake_of']['name']}"
+                f"{EmjIcons.game(map_data['retro_map']['game']['game_id'])} {map_data['retro_map']['name']}"
             )
         if len(diff_parts):
             description += "".join([f"- {part}\n" for part in diff_parts])
@@ -486,7 +484,7 @@ class MapInfoCog(CogBase):
         embed.add_field(
             name="Creator" + ("s" if len(map_data["creators"]) > 1 else ""),
             value="\n".join(
-                (f"- {creator['name']}" + ("" if not creator["role"] else f" *({creator['role']})*"))
+                (f"- {creator['user']['name']}" + ("" if not creator["role"] else f" *({creator['role']})*"))
                 for creator in map_data["creators"]
             ),
             inline=True,
@@ -495,7 +493,7 @@ class MapInfoCog(CogBase):
             embed.add_field(
                 name="Verifier" + ("s" if len(map_data["creators"]) > 1 else ""),
                 value="\n".join(
-                    (f"- {verif['name']}" + ("" if not verif["version"] else " *(Current ver)*"))
+                    (f"- {verif['user']['name']}" + ("" if verif["version"] is None else " *(Current ver)*"))
                     for verif in map_data["verifications"]
                 ),
                 inline=True,
@@ -558,8 +556,8 @@ class MapInfoCog(CogBase):
         if map_data["r6_start"] is None:
             return MessageContent(content="-# No R6 Start info for this map!")
 
-        content = f"Round 6 Start for [{map_data['name']}]({WEB_BASE_URL}/map/{map_data['code']}):\n" + \
-                  map_data["r6_start"]
+        content = f"Round 6 Start for [{map_data['name']}]({WEB_BASE_URL}/map/{map_data['code']}):\n" \
+                  f"{map_data['r6_start']}"
         return MessageContent(content=content)
 
     @staticmethod

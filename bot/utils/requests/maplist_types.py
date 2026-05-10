@@ -18,60 +18,6 @@ class LccData(TypedDict):
     leftover: int
 
 
-# ---------------------------------------------------------------------------
-# Full map  (get_maplist_map)
-# ---------------------------------------------------------------------------
-
-class GameRef(TypedDict):
-    id: int
-
-
-class RemakeOf(TypedDict):
-    name: str
-    game: GameRef
-
-
-class Creator(TypedDict):
-    name: str
-    role: str | None
-
-
-class Verification(TypedDict):
-    name: str
-    version: str | None  # truthy = current version
-
-
-class MapCompletion(TypedDict):
-    users: list[UserRef]
-    format: int
-    black_border: bool
-    no_geraldo: bool
-    current_lcc: bool
-    subm_proof_img: list[str]
-    lcc: LccData
-
-
-class FullMap(TypedDict):
-    code: str
-    name: str
-    aliases: list[str]
-    map_preview_url: str
-    placement_curver: int | None
-    placement_allver: int | None
-    difficulty: int | None       # expert difficulty index 0-4
-    botb_difficulty: int | None  # BotB difficulty index 0-4
-    remake_of: RemakeOf | None
-    optimal_heros: list[str]
-    creators: list[Creator]
-    verifications: list[Verification]
-    lccs: list[MapCompletion]
-    r6_start: str | None
-
-
-# ---------------------------------------------------------------------------
-# GET /maps  (get_experts, get_maplist, get_botb, get_nostalgia_pack)
-# ---------------------------------------------------------------------------
-
 class RetroGame(TypedDict):
     id: int
     game_id: int
@@ -90,6 +36,63 @@ class MapEntryRetroMap(TypedDict):
     retro_game_id: int
     game: RetroGame
 
+
+# ---------------------------------------------------------------------------
+# Full map  (get_maplist_map)
+# ---------------------------------------------------------------------------
+
+class MapUser(TypedDict):
+    discord_id: str
+    name: str
+    is_banned: bool
+
+
+class Creator(TypedDict):
+    user_id: str
+    role: str
+    user: MapUser
+
+
+class Verification(TypedDict):
+    user_id: str
+    version: int | None  # None = applies to all versions; int = specific BTD6 version
+    user: MapUser
+
+
+class MapCompletion(TypedDict):
+    users: list[UserRef]
+    format: int
+    black_border: bool
+    no_geraldo: bool
+    current_lcc: bool
+    subm_proof_img: list[str]
+    lcc: LccData
+
+
+class FullMap(TypedDict):
+    code: str
+    name: str
+    r6_start: int | None
+    map_data: str | None
+    map_preview_url: str
+    map_notes: str | None
+    placement_curver: int | None
+    placement_allver: int | None
+    difficulty: int | None
+    optimal_heros: list[str]
+    botb_difficulty: int | None
+    remake_of: int | None
+    deleted_on: str | None
+    is_verified: bool
+    aliases: list[str]
+    creators: list[Creator]
+    verifications: list[Verification]
+    retro_map: MapEntryRetroMap | None
+
+
+# ---------------------------------------------------------------------------
+# GET /maps  (get_experts, get_maplist, get_botb, get_nostalgia_pack)
+# ---------------------------------------------------------------------------
 
 class MapEntryMedals(TypedDict):
     completed: bool
