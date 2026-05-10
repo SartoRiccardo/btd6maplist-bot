@@ -132,6 +132,10 @@ class AdminUtilsCog(CogBase):
             get_formats(),
             return_exceptions=True,
         )
+        if isinstance(formats, BaseException):
+            return await interaction.edit_original_response(
+                content="Something went wrong, try again later!",
+            )
         permissions = user_data["permissions"] if not isinstance(user_data, BaseException) else {}
 
         if not _has_mod_permission(permissions, format_id):
