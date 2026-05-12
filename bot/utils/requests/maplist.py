@@ -366,8 +366,8 @@ async def reject_run(who: discord.User, message_id: int) -> None:
 
 
 def get_banner_medals_url(banner_url: str, medals: dict) -> str:
-    banner_name = banner_url.split("/")[-1]
-    return f"{os.environ['API_BASE_PUBLIC_URL']}/img/medal-banner/{banner_name}?{urllib.parse.urlencode(medals)}"
+    params = urllib.parse.urlencode({"banner": banner_url, **medals})
+    return f"{os.environ['API_BASE_IMAGES_URL']}/banner?{params}"
 
 
 async def reject_map(who: discord.User, message_id: int) -> None:
