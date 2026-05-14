@@ -1,5 +1,5 @@
 # https://docs.docker.com/language/python/containerize/
-ARG PYTHON_VERSION=3.10.4
+ARG PYTHON_VERSION=3.13.12
 FROM python:${PYTHON_VERSION}-slim AS base
 
 # Prevents Python from writing pyc files.
