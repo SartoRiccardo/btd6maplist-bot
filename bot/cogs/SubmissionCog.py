@@ -1,4 +1,3 @@
-import re
 import discord
 import asyncio
 from discord.ext import commands
@@ -20,7 +19,7 @@ from bot.utils.requests.maplist import (
 from bot.views import VRulesAccept, VRunFormatSelect
 from bot.views.modals import MMapSubmission, MRunSubmission
 from bot.exceptions import BadRequest, MaplistResNotFound
-from config import WEB_BASE_URL
+import os
 from bot.utils.misc import image_formats, max_upload_size_mb
 from bot.utils.models import MessageContent
 from collections.abc import Awaitable
@@ -40,30 +39,12 @@ class SubmitGroup(discord.app_commands.Group):
     pass
 
 
-async def check_submission(interaction: discord.Interaction, message: discord.Message) -> int | None:
-    if message.webhook_id is None or \
-            not len(message.embeds) or \
-            message.embeds[0].footer.text is None or \
-            (run_match := re.match(r"Run No\.(\d+)", message.embeds[0].footer.text)) is None:
-        return await interaction.response.send_message(
-            content="That's not a submission?",
-            ephemeral=True,
-        )
-    run_id = int(run_match.group(1))
-    return run_id
-
-
 @discord.app_commands.context_menu(name="Accept Completion")
 async def ctxm_accept_submission(interaction: discord.Interaction, message: discord.Message):
-    run_id = await check_submission(interaction, message)
-    if not isinstance(run_id, int):
-        return
-
     await interaction.response.defer(ephemeral=True)
     try:
-        await accept_run(interaction.user, run_id)
-        response = "✅ Completion accepted!\n" \
-                   f"You can edit it [on the website]({WEB_BASE_URL}/completions/{run_id}) if needed."
+        await accept_run(interaction.user, message.id)
+        response = "✅ Completion accepted!"
     except BadRequest:
         response = "That completion was already accepted!"
     except MaplistResNotFound:
@@ -77,62 +58,26 @@ ctxm_accept_submission.error(handle_error)
 
 @discord.app_commands.context_menu(name="Reject Submission")
 async def ctxm_reject_submission(interaction: discord.Interaction, message: discord.Message):
-    async def reject_completion_submission():
-        run_id = await check_submission(interaction, message)
-        if not isinstance(run_id, int):
-            return
-
-        await interaction.response.defer(ephemeral=True)
-        try:
-            await reject_run(interaction.user, run_id)
-            response = "✅ Rejected successfully!\n" \
-                       f"If this was a mistake, you can insert it manually on the website, on the map's page."
-        except BadRequest:
-            response = "That run was already accepted!\n" \
-                       "-# If you wanted to delete it, do so on the website."
-        except MaplistResNotFound:
-            response = "Couldn't find that completion!\n" \
-                       "-# Maybe it was rejected?"
-        await interaction.edit_original_response(content=response)
-
-    async def reject_map_submission():
-        if not len(message.embeds) or \
-                message.embeds[0].title is None or \
-                " - " not in message.embeds[0].title:
-            return await interaction.response.send_message(
-                content="That's not a submission?",
-                ephemeral=True,
-            )
-
-        await interaction.response.defer(ephemeral=True)
+    await interaction.response.defer(ephemeral=True)
+    try:
+        await reject_run(interaction.user, message.id)
+        response = "✅ Rejected successfully!\n" \
+                   "If this was a mistake, you can insert it manually on the website, on the map's page."
+    except BadRequest:
+        response = "That run was already accepted!\n" \
+                   "-# If you wanted to delete it, do so on the website."
+    except MaplistResNotFound:
         try:
             await reject_map(interaction.user, message.id)
             response = "✅ Rejected successfully!\n" \
-                       f"If this was a mistake, you can simply insert the map manually."
+                       "If this was a mistake, you can simply insert the map manually."
         except BadRequest:
             response = "That map was already accepted!\n" \
                        "-# If you wanted to delete it, do so on the website."
         except MaplistResNotFound:
-            response = "Couldn't find that map!\n" \
-                       "-# Maybe it was rejected?"
-        await interaction.edit_original_response(content=response)
-
-    if message.webhook_id:
-        formats = await get_formats()
-        for format_data in formats:
-            if format_data["run_submission_wh"] and \
-                    (match := re.match(r"https://discord.com/api/webhooks/(\d+)", format_data["run_submission_wh"])) and \
-                    int(match.group(1)) == message.webhook_id:
-                return await reject_completion_submission()
-            if format_data["map_submission_wh"] and \
-                    (match := re.match(r"https://discord.com/api/webhooks/(\d+)", format_data["map_submission_wh"])) and \
-                    int(match.group(1)) == message.webhook_id:
-                return await reject_map_submission()
-
-    return await interaction.response.send_message(
-        content="That's not a submission?",
-        ephemeral=True,
-    )
+            response = "Couldn't find that submission!\n" \
+                       "-# Maybe it was already rejected?"
+    await interaction.edit_original_response(content=response)
 
 
 ctxm_reject_submission.error(handle_error)
@@ -231,15 +176,15 @@ class SubmissionCog(CogBase):
         # within the 3-second Discord threshold because it's local, otherwise
         # it probably has to defer. But if it does, it can't show the modal.
         try:
-            ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
+            ml_user = await get_maplist_user(interaction.user.id)
         except MaplistResNotFound:
             ml_user = None
 
         if ml_user:
             permissions = set()
-            for perms in ml_user["permissions"]:
-                if perms["format"] is None or perms["format"] == format_id:
-                    permissions.update(perms["permissions"])
+            for perm_name, format_ids in ml_user["permissions"].items():
+                if None in format_ids or format_id in format_ids:
+                    permissions.add(perm_name)
 
             if "create:map_submission" not in permissions:
                 return await interaction.response.send_message(
@@ -257,13 +202,6 @@ class SubmissionCog(CogBase):
         formats = await get_formats()
         for fmt in formats:
             if fmt["id"] == format_id:
-                if fmt["map_submission_status"] == "open_chimps" and proof is None:
-                    return await interaction.response.send_message(
-                        ephemeral=True,
-                        content="⚠️ Map submissions in this list require a screenshot of someone beating CHIMPS mode "
-                                "in your map.\n\nSubmit the screenshot via the `proof` option when running this "
-                                "command!",
-                    )
                 if fmt["map_submission_status"] == "closed":
                     return await interaction.response.send_message(
                         ephemeral=True,
@@ -447,9 +385,9 @@ class SubmissionCog(CogBase):
 
             permissions = set()
             if ml_user:
-                for perms in ml_user["permissions"]:
-                    if perms["format"] is None or perms["format"] == format_id:
-                        permissions.update(perms["permissions"])
+                for perm_name, format_ids in ml_user["permissions"].items():
+                    if None in format_ids or format_id in format_ids:
+                        permissions.add(perm_name)
 
             return MRunSubmission(
                 callback_wrapper,
@@ -463,7 +401,7 @@ class SubmissionCog(CogBase):
             )
 
         try:
-            ml_user = await get_maplist_user(interaction.user.id, no_load_oak=True)
+            ml_user = await get_maplist_user(interaction.user.id)
         except MaplistResNotFound:
             ml_user = None
 

@@ -4,7 +4,6 @@ import json
 import discord
 import asyncio
 from typing import Any
-from config import DATA_PATH
 from datetime import datetime
 from discord.ext import commands
 from bot.utils.handlers import handle_error
@@ -53,7 +52,7 @@ class CogBase(commands.Cog):
 
     @staticmethod
     def __state_path(cog_name):
-        path = f"{DATA_PATH}/cogstate"
+        path = os.path.join(os.path.expanduser(os.environ.get("DATA_PATH", "~/data")), "cogstate")
         if not os.path.exists(path):
             os.mkdir(path)
         return f"{path}/{cog_name}.json"

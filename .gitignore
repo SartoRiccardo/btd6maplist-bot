@@ -2,10 +2,10 @@
 data
 *.key
 *.pem
-**/emojis.py
 
 # Discord
 config.py
+.env.local
 
 # Python
 __pycache__

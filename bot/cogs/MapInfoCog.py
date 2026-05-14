@@ -4,7 +4,8 @@ import math
 from discord.ext import commands
 from bot.utils.requests.maplist import (
     get_maplist_map,
-    get_map_completions,
+    get_completions,
+    get_map_lcc,
     get_maplist_config,
     get_experts,
     get_maplist,
@@ -13,20 +14,23 @@ from bot.utils.requests.maplist import (
     get_botb,
     get_nostalgia_pack,
 )
+from bot.utils.requests.maplist_types import CompletionEntry, FullMap, MaplistConfig
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
 from bot.utils.models import MessageContent, LazyMessageContent
 from bot.views import VPages, VPaginateList
-from config import WEB_BASE_URL, EMBED_CLR, NK_PREVIEW_PROXY
+import os
+from bot.utils.env_transforms import get_embed_color, get_nk_preview_proxy
 from bot.types import ExpertDifficulty, BotbDifficulty, NostalgiaPackGame
 from bot.utils.emojis import EmjHeros, EmjIcons, EmjMisc, EmjMedals
 from bot.utils.formulas import points
 from bot.utils.colors import EmbedColor
-from bot.utils.formulas import get_page_idxs
 from bot.utils.misc import image_formats
 from typing import get_args
 from collections.abc import Callable
 from bot.utils.discordutils import composite_views
+
+WEB_BASE_URL = os.environ["WEB_BASE_URL"]
 
 
 class MapInfoCog(CogBase):
@@ -127,7 +131,7 @@ class MapInfoCog(CogBase):
         ]
         diffval = labels.index(difficulty)
         experts = await get_experts()
-        experts = [exp for exp in experts if exp["format_idx"] == diffval]
+        experts = [exp for exp in experts if exp["difficulty"] == diffval]
 
         def create_message(entries: list[dict]) -> discord.Embed:
             content = "\n".join([
@@ -139,7 +143,7 @@ class MapInfoCog(CogBase):
                 title=f"{icon} {difficulty}s",
                 description=f"{desc}\n\n{content}",
                 color=EmbedColor.experts,
-                url=f"{WEB_BASE_URL}/experts?difficulty={diffq}",
+                url=f"{WEB_BASE_URL}/maps/expert-list?difficulty={diffq}",
             )
 
         await self.send_list(
@@ -166,7 +170,7 @@ class MapInfoCog(CogBase):
 
         def create_message(entries: list[dict]) -> discord.Embed:
             content = "\n".join([
-                f"`{'#'+str(mlmap['format_idx']): >3}` (`{points(mlmap['format_idx'], cfg): >3}pt`) ｌ "
+                f"`{'#'+str(mlmap['placement_curver']): >3}` (`{points(mlmap['placement_curver'], cfg): >3}pt`) ｌ "
                 f"`{mlmap['code']}` ｌ {mlmap['name']}"
                 for mlmap in entries
             ])
@@ -174,7 +178,7 @@ class MapInfoCog(CogBase):
                 title=f"The Maplist",
                 description=f"{content}",
                 color=EmbedColor.maplist,
-                url=f"{WEB_BASE_URL}/list",
+                url=f"{WEB_BASE_URL}/maps/maplist",
             )
 
         await self.send_list(
@@ -226,7 +230,7 @@ class MapInfoCog(CogBase):
         def create_message(entries: list[dict]) -> discord.Embed:
             extr_emoji = f'  {EmjIcons.botb_extreme}'
             content = "\n".join([
-                f"`{map_data['code']}` ｌ{extr_emoji if map_data['format_idx'] == 4 else ''} {map_data['name']}"
+                f"`{map_data['code']}` ｌ{extr_emoji if map_data['botb_difficulty'] == 4 else ''} {map_data['name']}"
                 for map_data in entries
             ])
             icon, diffq, desc = info[diffval]
@@ -234,7 +238,7 @@ class MapInfoCog(CogBase):
                 title=f"{icon} {difficulty}s",
                 description=f"{desc}\n\n{content}",
                 color=EmbedColor.botb,
-                url=f"{WEB_BASE_URL}/best-of-the-best?difficulty={diffq}",
+                url=f"{WEB_BASE_URL}/maps/best-of-the-best?difficulty={diffq}",
             )
 
         await self.send_list(
@@ -275,12 +279,12 @@ class MapInfoCog(CogBase):
         nostalgia_pack = await get_nostalgia_pack(diffval)
 
         def create_message(entries: list[dict]) -> discord.Embed:
-            category = entries[0]["format_idx"]["category"]["name"]
+            category = entries[0]["retro_map"]["game"]["category_name"]
             content = "\n".join([
                 (
-                    f"`{map_data['code']}` ｌ {map_data['format_idx']['name']}"
+                    f"`{map_data['code']}` ｌ {map_data['retro_map']['name']}"
                     if map_data["code"] else
-                    f"`       ` ｌ ~~{map_data['format_idx']['name']}~~ {EmjIcons.np_missing}"
+                    f"`       ` ｌ ~~{map_data['retro_map']['name']}~~ {EmjIcons.np_missing}"
                 )
                 for map_data in entries
             ])
@@ -291,17 +295,17 @@ class MapInfoCog(CogBase):
                 title=f"{icon} {category}",
                 description=content,
                 color=EmbedColor.np,
-                url=f"{WEB_BASE_URL}/nostalgia-pack?game={diffq}&category={category_q}",
+                url=f"{WEB_BASE_URL}/maps/nostalgia-pack?game={diffq}&category={category_q}",
             )
 
         nostalgia_pack.sort(
-            key=lambda x: (x["format_idx"]["category"]["id"], x["format_idx"]["sort_order"])
+            key=lambda x: (x["retro_map"]["game"]["category_id"], x["retro_map"]["sort_order"])
         )
 
         maps_by_category = {}
         for map_data in nostalgia_pack:
             maps_by_category \
-                .setdefault(map_data["format_idx"]["category"]["name"], []) \
+                .setdefault(map_data["retro_map"]["game"]["category_name"], []) \
                 .append(map_data)
 
         pages = []
@@ -369,20 +373,16 @@ class MapInfoCog(CogBase):
             map_id: str,
             idx: int
     ) -> None:
-        map_data, ml_config, ml_formats = await asyncio.gather(
+        map_data, ml_config, ml_formats, max_lcc = await asyncio.gather(
             get_maplist_map(map_id),
             get_maplist_config(),
             get_formats(),
+            get_map_lcc(map_id),
         )
         visible_formats = [f["id"] for f in ml_formats if not f["hidden"]]
 
         if map_data["map_preview_url"].startswith("https://data.ninjakiwi.com"):
-            map_data["map_preview_url"] = NK_PREVIEW_PROXY(map_data["code"])
-
-        max_lcc = map_data["lccs"][0] if len(map_data["lccs"]) else None
-        for lcc in map_data["lccs"]:
-            if lcc["lcc"]["leftover"] > max_lcc["lcc"]["leftover"]:
-                max_lcc = lcc
+            map_data["map_preview_url"] = get_nk_preview_proxy(map_data["code"])
 
         pages = []
         select_pages = [
@@ -426,8 +426,8 @@ class MapInfoCog(CogBase):
 
     @staticmethod
     def get_map_message(
-            map_data: dict,
-            ml_config: dict,
+            map_data: FullMap,
+            ml_config: MaplistConfig,
             visible_formats: list[int],
     ) -> MessageContent:
         description = ""
@@ -436,13 +436,13 @@ class MapInfoCog(CogBase):
 
         diff_parts = []
         if map_data["placement_curver"] is not None and \
-                map_data["placement_curver"] <= ml_config['map_count']["value"] and \
+                map_data["placement_curver"] <= ml_config['map_count'] and \
                 1 in visible_formats:
             diff_parts.append(
                 f"{EmjIcons.curver} #{map_data['placement_curver']} ({points(map_data['placement_curver'], ml_config)}pt)"
             )
         if map_data["placement_allver"] is not None and \
-                map_data["placement_allver"] <= ml_config['map_count']["value"] and \
+                map_data["placement_allver"] <= ml_config['map_count'] and \
                 2 in visible_formats:
             diff_parts.append(
                 f"{EmjIcons.allver} #{map_data['placement_allver']} ({points(map_data['placement_allver'], ml_config)}pt)"
@@ -459,9 +459,9 @@ class MapInfoCog(CogBase):
             diff_parts.append(
                 f"{EmjIcons.botb_diff_by_index(map_data['botb_difficulty'])} {diff_str}"
             )
-        if map_data["remake_of"] is not None and 11 in visible_formats:
+        if map_data["retro_map"] is not None and 11 in visible_formats:
             diff_parts.append(
-                f"{EmjIcons.game(map_data['remake_of']['game']['id'])} {map_data['remake_of']['name']}"
+                f"{EmjIcons.game(map_data['retro_map']['game']['game_id'])} {map_data['retro_map']['name']}"
             )
         if len(diff_parts):
             description += "".join([f"- {part}\n" for part in diff_parts])
@@ -472,7 +472,7 @@ class MapInfoCog(CogBase):
                            f"# {' '.join(hero_emojis)}\n"
 
         embed = discord.Embed(
-            color=EMBED_CLR,
+            color=get_embed_color(),
             title=map_data["name"],
             description=description,
             url=f"{WEB_BASE_URL}/map/{map_data['code']}",
@@ -482,7 +482,7 @@ class MapInfoCog(CogBase):
         embed.add_field(
             name="Creator" + ("s" if len(map_data["creators"]) > 1 else ""),
             value="\n".join(
-                (f"- {creator['name']}" + ("" if not creator["role"] else f" *({creator['role']})*"))
+                (f"- {creator['user']['name']}" + ("" if not creator["role"] else f" *({creator['role']})*"))
                 for creator in map_data["creators"]
             ),
             inline=True,
@@ -491,7 +491,7 @@ class MapInfoCog(CogBase):
             embed.add_field(
                 name="Verifier" + ("s" if len(map_data["creators"]) > 1 else ""),
                 value="\n".join(
-                    (f"- {verif['name']}" + ("" if not verif["version"] else " *(Current ver)*"))
+                    (f"- {verif['user']['name']}" + ("" if verif["version"] is None else " *(Current ver)*"))
                     for verif in map_data["verifications"]
                 ),
                 inline=True,
@@ -500,8 +500,8 @@ class MapInfoCog(CogBase):
 
     @staticmethod
     def get_lcc_message(
-            map_data: dict,
-            lcc_data: dict | None,
+            map_data: FullMap,
+            lcc_data: CompletionEntry | None,
     ) -> MessageContent:
         if lcc_data is None:
             return MessageContent(content="-# No LCCs for this map!")
@@ -511,11 +511,11 @@ class MapInfoCog(CogBase):
             if any(proof_url.endswith(f".{ext}") for ext in image_formats)
         ]
 
-        ply_list = lcc_data["users"][0]["name"] \
-            if len(lcc_data["users"]) == 1 else \
-            "\n".join([f"- {usr['name']}" for usr in lcc_data["users"]])
+        ply_list = lcc_data["players"][0]["name"] \
+            if len(lcc_data["players"]) == 1 else \
+            "\n".join([f"- {usr['name']}" for usr in lcc_data["players"]])
 
-        format_emj = EmjIcons.format(lcc_data["format"])
+        format_emj = EmjIcons.format(lcc_data["format_id"])
         medals = [
             EmjMedals.bb if lcc_data["black_border"] else EmjMedals.win,
             EmjMedals.no_opt_hero if lcc_data["no_geraldo"] else None,
@@ -525,7 +525,7 @@ class MapInfoCog(CogBase):
 
         map_url = f"{WEB_BASE_URL}/map/{map_data['code']}"
         embed = discord.Embed(
-            color=EMBED_CLR,
+            color=get_embed_color(),
             title="Least Cash CHIMPS",
             description=f"{format_emj} / {medals_str}\n"
                         f"Saveup: {EmjMisc.cash} **{lcc_data['lcc']['leftover']:,}**",
@@ -535,7 +535,7 @@ class MapInfoCog(CogBase):
         if len(image_proofs):
             embed.set_image(url=image_proofs[0])
         embed.add_field(
-            name="Player" + ("s" if len(lcc_data["users"]) > 1 else ""),
+            name="Player" + ("s" if len(lcc_data["players"]) > 1 else ""),
             value=ply_list,
         )
 
@@ -549,28 +549,26 @@ class MapInfoCog(CogBase):
 
     @staticmethod
     def get_r6start_message(
-            map_data: dict,
+            map_data: FullMap,
     ) -> MessageContent:
         if map_data["r6_start"] is None:
             return MessageContent(content="-# No R6 Start info for this map!")
 
-        content = f"Round 6 Start for [{map_data['name']}]({WEB_BASE_URL}/map/{map_data['code']}):\n" + \
-                  map_data["r6_start"]
+        content = f"Round 6 Start for [{map_data['name']}]({WEB_BASE_URL}/map/{map_data['code']}):\n" \
+                  f"{map_data['r6_start']}"
         return MessageContent(content=content)
 
     @staticmethod
     def get_completions_message(
             interaction: discord.Interaction,
-            map_data: dict,
+            map_data: FullMap,
             pages_view: VPages,
     ) -> MessageContent:
         items_page = 12
-        items_page_srv = 50
-        _si, _ei, req_page_start, req_page_end = get_page_idxs(1, items_page, items_page_srv)
 
         async def request_completions(pages: list[int]):
             lb_data = await asyncio.gather(*[
-                get_map_completions(map_data["code"], pg)
+                get_completions(map_data["code"], pg, per_page=items_page)
                 for pg in pages
             ])
             return {pg: lb_data[i] for i, pg in enumerate(pages)}
@@ -586,14 +584,14 @@ class MapInfoCog(CogBase):
                       "User                                         |  Format ~ Medals\n" \
                       "—————————————  +  —————————\n"
             for entry in entries:
-                for i, ply in enumerate(entry["users"]):
-                    comp_format_emj = EmjIcons.format(entry["format"])
+                for i, ply in enumerate(entry["players"]):
+                    comp_format_emj = EmjIcons.format(entry["format_id"])
                     comp_medals = [EmjMedals.bb if entry["black_border"] else EmjMedals.win]
-                    if entry["format"] <= 50 and entry["no_geraldo"]:
+                    if entry["format_id"] <= 50 and entry["no_geraldo"]:
                         comp_medals.append(EmjMedals.no_opt_hero)
-                    if entry["current_lcc"]:
+                    if entry["is_current_lcc"]:
                         comp_medals.append(EmjMedals.lcc)
-                    comp_info = "↓     ↓     ↓     ↓" if i < len(entry["users"])-1 else \
+                    comp_info = "↓     ↓     ↓     ↓" if i < len(entry["players"])-1 else \
                         medals_template.format(comp_format_emj, " ".join(comp_medals))
                     uname = ply["name"]
                     if len(uname) > 20:
@@ -602,21 +600,19 @@ class MapInfoCog(CogBase):
             return content.strip()
 
         async def load_message() -> MessageContent:
-            pages_to_req = [pg for pg in range(req_page_start, req_page_end+1)]
-            comp_pages = await request_completions(pages_to_req)
-
-            client_pages = math.ceil(comp_pages[req_page_start]["total"] / items_page)
+            comp_pages = await request_completions([1])
+            client_pages = comp_pages[1]["meta"]["last_page"]
             view = VPaginateList(
                 interaction,
                 client_pages,
                 1,
                 comp_pages,
                 items_page,
-                items_page_srv,
+                items_page,
                 request_completions,
                 build_message,
                 additional_views=[pages_view],
-                list_key="completions",
+                list_key="data",
             )
             return MessageContent(
                 content=view.message_on_page(1),

@@ -23,8 +23,11 @@ class VRunFormatSelect(discord.ui.View):
         ))
 
     async def delete_og_interaction(self) -> None:
-        og_resp = await self.og_interaction.original_response()
-        await og_resp.delete()
+        try:
+            og_resp = await self.og_interaction.original_response()
+            await og_resp.delete()
+        except discord.NotFound:
+            pass
 
     async def on_format_select(
             self,

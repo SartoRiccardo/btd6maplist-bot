@@ -1,5 +1,4 @@
 import asyncio
-import math
 import discord
 from discord.ext import commands
 from bot.cogs.CogBase import CogBase
@@ -7,13 +6,12 @@ from bot.utils.emojis import EmjPlacements
 from bot.utils.decos import autodoc
 from bot.types import Format, LbType
 from bot.utils.requests.maplist import get_leaderboard
+from bot.exceptions import MaplistResNotFound
 from bot.views import VPaginateList
-from bot.utils.formulas import get_page_idxs
 
 
 row_template = "{emoji} `{name: <20}`  |  `{score: <5,}`"
 items_page = 20
-items_page_srv = 50
 placements_emojis = {
     1: f"  {EmjPlacements.top1} ",
     2: f"  {EmjPlacements.top2} ",
@@ -33,6 +31,7 @@ class LeaderboardCog(CogBase):
         name="leaderboard",
         description="Get the Maplist leaderboard",
     )
+    @discord.app_commands.rename(game_format="list")
     @discord.app_commands.describe(
         lb_type="The type of leaderboard points",
     )
@@ -53,30 +52,30 @@ class LeaderboardCog(CogBase):
 
         await interaction.response.defer(ephemeral=hide)
 
-        _si, _ei, req_page_start, req_page_end = get_page_idxs(page, items_page, items_page_srv)
-        lb_pages = await self.request_pages(
-            lb_type,
-            game_format,
-            [pg for pg in range(req_page_start, req_page_end+1)]
-        )
+        try:
+            lb_pages = await self.request_pages(lb_type, game_format, [page])
+        except MaplistResNotFound:
+            return await interaction.edit_original_response(
+                content=f"❌ The {lb_type} leaderboard for the {game_format} does not exist!",
+            )
 
-        if lb_pages[req_page_start]["pages"] == 0:
+        if lb_pages[page]["meta"]["total"] == 0:
             return await interaction.edit_original_response(
                 content="❌ No entries!\n"
                         "-# Maybe your page number was too big?"
             )
 
-        client_pages = math.ceil(lb_pages[req_page_start]["total"] / items_page)
+        client_pages = lb_pages[page]["meta"]["last_page"]
         view = VPaginateList(
             interaction,
             client_pages,
             page,
             lb_pages,
             items_page,
-            items_page_srv,
+            items_page,
             lambda pages: self.request_pages(lb_type, game_format, pages),
             self.create_lb_message,
-            list_key="entries",
+            list_key="data",
         )
         await interaction.edit_original_response(
             content=self.create_lb_message(view.get_needed_rows(page, lb_pages)),
@@ -90,7 +89,7 @@ class LeaderboardCog(CogBase):
             pages: list[int],
     ) -> dict[int, dict]:
         lb_data = await asyncio.gather(*[
-            get_leaderboard(lb_type, game_format, pg)
+            get_leaderboard(lb_type, game_format, pg, per_page=items_page)
             for pg in pages
         ])
         return {pg: lb_data[i] for i, pg in enumerate(pages)}
@@ -102,7 +101,7 @@ class LeaderboardCog(CogBase):
             "———————————————-   +   —————",
         ]
         for entry in entries:
-            plcmt = placements_emojis.get(entry["position"], f"`{entry['position']: >3}`")
+            plcmt = placements_emojis.get(entry["placement"], f"`{entry['placement']: >3}`")
             rows.append(row_template.format(
                 emoji=plcmt,
                 name=entry["user"]["name"],

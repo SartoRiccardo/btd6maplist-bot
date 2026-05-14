@@ -5,7 +5,6 @@ import discord
 from discord.ext import commands
 from bot.cogs.CogBase import CogBase
 from bot.utils.decos import autodoc
-from bot.utils.formulas import get_page_idxs
 from bot.utils.requests.maplist import (
     get_maplist_user,
     get_user_completions,
@@ -17,18 +16,16 @@ from bot.utils.requests.ninjakiwi import get_btd6_user
 from bot.views import VPages, VPaginateList
 from bot.utils.models import MessageContent, LazyMessageContent
 from bot.exceptions import MaplistResNotFound
-from config import EMBED_CLR, WEB_BASE_URL
+import os
+from bot.utils.env_transforms import get_embed_color
 from bot.utils.emojis import EmjMedals, EmjIcons, EmjPlacements, EmjMisc
 
 
 empty_profile = {
-    "list_stats": [],
-    "created_maps": [],
-    "medals": {
-        "wins": 0,
-    },
-    "avatarURL": "https://static-api.nkstatic.com/appdocs/4/assets/opendata/db32af61df5646951a18c60fe0013a31_ProfileAvatar01.png",
-    "bannerURL": "https://static-api.nkstatic.com/appdocs/4/assets/opendata/bbd8e1412f656b91db7df7aabbc1598b_TeamsBannerDeafult.png",
+    "ranks": [],
+    "medals": {"wins": 0, "black_border": 0, "no_geraldo": 0, "current_lcc": 0},
+    "avatar_url": "https://static-api.nkstatic.com/appdocs/4/assets/opendata/db32af61df5646951a18c60fe0013a31_ProfileAvatar01.png",
+    "banner_url": "https://static-api.nkstatic.com/appdocs/4/assets/opendata/bbd8e1412f656b91db7df7aabbc1598b_TeamsBannerDeafult.png",
 }
 placements_emojis = {
     1: EmjPlacements.top1,
@@ -118,12 +115,10 @@ class UserCog(CogBase):
             pages_view: VPages,
     ) -> MessageContent:
         items_page = 12
-        items_page_srv = 50
-        _si, _ei, req_page_start, req_page_end = get_page_idxs(1, items_page, items_page_srv)
 
         async def request_completions(pages: list[int]):
             lb_data = await asyncio.gather(*[
-                get_user_completions(user.id, pg)
+                get_user_completions(user.id, pg, per_page=items_page)
                 for pg in pages
             ])
             return {pg: lb_data[i] for i, pg in enumerate(pages)}
@@ -139,11 +134,11 @@ class UserCog(CogBase):
                       "—————————  + —————————\n"
             medal_spots = 3
             for i, entry in enumerate(entries):
-                format_emj = EmjIcons.format(entry["format"])
+                format_emj = EmjIcons.format(entry["format_id"])
                 comp_medals = []
-                if entry["format"] <= 50 and entry["no_geraldo"]:
+                if entry["format_id"] <= 50 and entry["no_geraldo"]:
                     comp_medals.append(EmjMedals.no_opt_hero)
-                if entry["current_lcc"]:
+                if entry["is_current_lcc"]:
                     comp_medals.append(EmjMedals.lcc)
                 comp_medals.append(EmjMedals.bb if entry["black_border"] else EmjMedals.win)
                 for _ in range(len(comp_medals), medal_spots):
@@ -156,21 +151,19 @@ class UserCog(CogBase):
             return content.strip()
 
         async def load_message() -> MessageContent:
-            pages_to_req = [pg for pg in range(req_page_start, req_page_end+1)]
-            comp_pages = await request_completions(pages_to_req)
-
-            client_pages = math.ceil(comp_pages[req_page_start]["total"] / items_page)
+            comp_pages = await request_completions([1])
+            client_pages = comp_pages[1]["meta"]["last_page"]
             view = VPaginateList(
                 interaction,
                 client_pages,
                 1,
                 comp_pages,
                 items_page,
-                items_page_srv,
+                items_page,
                 request_completions,
                 build_message,
                 additional_views=[pages_view],
-                list_key="completions",
+                list_key="data",
             )
             return MessageContent(
                 content=view.message_on_page(1),
@@ -187,53 +180,59 @@ class UserCog(CogBase):
             formats: list[dict],
     ) -> MessageContent:
         description = ""
-        if len(profile["created_maps"]):
-            description += f"- **Maps Created:** {len(profile['created_maps'])}\n"
         # Never miss a chance to be cooler than others
         if user.id == 1077309729942024302:
             description += "- **Bots Created:** This one and some others\n" \
-                           f"- **Websites Created:** [{WEB_BASE_URL.split('//', 1)[1]}]({WEB_BASE_URL})"
+                           f"- **Websites Created:** [{os.environ['WEB_BASE_URL'].split('//', 1)[1]}]({os.environ['WEB_BASE_URL']})"
 
         something = len(description) > 0
 
         embed = discord.Embed(
             title=user.display_name,
-            color=EMBED_CLR,
+            color=get_embed_color(),
             description=description.strip(),
         )
         if profile["medals"]["wins"] > 0:
-            banner_url = profile["bannerURL"] if profile["bannerURL"] else empty_profile["bannerURL"]
+            banner_url = profile["banner_url"] if profile["banner_url"] else empty_profile["banner_url"]
             embed.set_image(url=get_banner_medals_url(banner_url, profile["medals"]))
-        elif profile["bannerURL"] and profile != empty_profile:
-            embed.set_image(url=profile["bannerURL"])
+        elif profile["banner_url"] and profile != empty_profile:
+            embed.set_image(url=profile["banner_url"])
 
-        embed.set_thumbnail(url=profile["avatarURL"] if profile["avatarURL"] else empty_profile["avatarURL"])
+        embed.set_thumbnail(url=profile["avatar_url"] if profile["avatar_url"] else empty_profile["avatar_url"])
 
-        for stats in sorted(profile["list_stats"], key=lambda x: x["format_id"]):
-            format_data = next(f for f in formats if f["id"] == stats["format_id"])
+        for rank in sorted(profile["ranks"], key=lambda x: x["format_id"]):
+            format_data = next(f for f in formats if f["id"] == rank["format_id"])
             if format_data["hidden"]:
                 continue
 
             something = True
-            prf = stats["stats"]
-            description = f'**Score:** {int(prf["points"]) if prf["points"].is_integer() else prf["points"]}pt ' + \
-                          placements_emojis.get(prf["pts_placement"], f'(#{prf["pts_placement"]})')
-            if prf["lccs"]:
-                amount = int(prf["lccs"]) if prf["lccs"].is_integer() else prf["lccs"]
+            description = ""
+            if rank["points"] is not None:
+                pts = rank["points"]["score"]
+                description = f'**Score:** {int(pts) if pts.is_integer() else pts}pt ' + \
+                              placements_emojis.get(rank["points"]["placement"], f'(#{rank["points"]["placement"]})')
+            if rank["lccs"]["score"]:
+                score = rank["lccs"]["score"]
+                amount = int(score) if score.is_integer() else score
+                plcmt = rank["lccs"]["placement"]
                 description += f'\n- {EmjMedals.lcc} {amount} LCCs ' + \
-                               placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
-            if prf["no_geraldo"]:
-                amount = int(prf["no_geraldo"]) if prf["lccs"].is_integer() else prf["no_geraldo"]
+                               (placements_emojis.get(plcmt, f'(#{plcmt})') if plcmt else "")
+            if rank["no_geraldo"]["score"]:
+                score = rank["no_geraldo"]["score"]
+                amount = int(score) if score.is_integer() else score
+                plcmt = rank["no_geraldo"]["placement"]
                 description += f'\n- {EmjMedals.no_opt_hero} {amount} No Optimal Hero runs ' + \
-                               placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
-            if prf["black_border"]:
-                amount = int(prf["black_border"]) if prf["lccs"].is_integer() else prf["black_border"]
+                               (placements_emojis.get(plcmt, f'(#{plcmt})') if plcmt else "")
+            if rank["black_border"]["score"]:
+                score = rank["black_border"]["score"]
+                amount = int(score) if score.is_integer() else score
+                plcmt = rank["black_border"]["placement"]
                 description += f'\n- {EmjMedals.bb} {amount} Black Border runs ' + \
-                               placements_emojis.get(prf["lccs_placement"], f'(#{prf["lccs_placement"]})')
+                               (placements_emojis.get(plcmt, f'(#{plcmt})') if plcmt else "")
 
             embed.add_field(name=f"{format_data['emoji']} {format_data['name']} Stats", value=description, inline=True)
 
-        if user.id == interaction.user.id and profile["avatarURL"] is None:
+        if user.id == interaction.user.id and profile["avatar_url"] is None:
             embed.set_footer(
                 text="You can set a profile picture either through the website "
                      "or the /oak command"
