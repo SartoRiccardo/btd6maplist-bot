@@ -5,6 +5,11 @@ from typing import Literal, TypedDict
 # Shared primitives
 # ---------------------------------------------------------------------------
 
+class SubmProofImg(TypedDict):
+    url: str
+    is_added_by_admin: bool
+
+
 class UserRef(TypedDict):
     name: str
 
@@ -145,7 +150,7 @@ class CompletionEntry(TypedDict):
     map_code: str
     submitted_on: int
     subm_notes: str | None
-    subm_proof_img: list[str]
+    subm_proof_img: list[SubmProofImg]
     subm_proof_vid: list[str]
     format_id: int
     black_border: bool

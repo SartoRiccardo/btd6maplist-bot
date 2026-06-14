@@ -507,8 +507,8 @@ class MapInfoCog(CogBase):
             return MessageContent(content="-# No LCCs for this map!")
 
         image_proofs = [
-            proof_url for proof_url in lcc_data["subm_proof_img"]
-            if any(proof_url.endswith(f".{ext}") for ext in image_formats)
+            proof["url"] for proof in lcc_data["subm_proof_img"]
+            if any(proof["url"].endswith(f".{ext}") for ext in image_formats)
         ]
 
         ply_list = lcc_data["players"][0]["name"] \
