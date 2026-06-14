@@ -1,3 +1,4 @@
+import json
 
 
 def stringify_errors(errors: dict[str, str]) -> str:
@@ -41,7 +42,14 @@ class ErrorStatusCode(Exception):
 class BadRequest(Exception):
     def __init__(self, resp_json: dict):
         super().__init__()
-        self.errors = resp_json["errors"]
+        self.resp_json = resp_json
 
     def formatted_exc(self) -> str:
-        return stringify_errors(self.errors)
+        parts = []
+        if "message" in self.resp_json:
+            parts.append(self.resp_json["message"])
+        if "errors" in self.resp_json:
+            parts.append(stringify_errors(self.resp_json["errors"]))
+        if not parts:
+            parts.append(f"Something went wrong! Please take a screenshot & ping the bot owner.\n```json\n{json.dumps(self.resp_json, indent=2)}\n```")
+        return "\n".join(parts)
