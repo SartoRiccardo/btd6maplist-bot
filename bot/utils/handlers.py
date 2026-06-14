@@ -20,7 +20,7 @@ async def handle_error(
         content = thrown_error.formatted_exc()
         print(error)
     elif error_type == AttributeError:
-        content = "Something went wrong! Please take a screenshot & ping the bot owner."
+        content = f"Something went wrong! Please take a screenshot & ping the bot owner.\n`{thrown_error}`"
         str_traceback = io.StringIO()
         traceback.print_exception(error, file=str_traceback)
         print(f"\nAttributeError on '{thrown_error.name}': {thrown_error}\n{str_traceback.getvalue().rstrip()}\n")

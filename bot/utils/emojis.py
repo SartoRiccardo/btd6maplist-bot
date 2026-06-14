@@ -70,6 +70,7 @@ class EmjHeros(BaseEmjClass):
     gwen = "<:h_gwen:1284204379615924244>"
     obyn = "<:h_obyn:1284204391804571759>"
     striker = "<:h_striker:1284204469709705247>"
+    striker_jones = striker
     churchill = "<:h_churchill:1284204314151096343>"
     ben = "<:h_ben:1284204290356940914>"
     ezili = "<:h_ezili:1284204353221169233>"
