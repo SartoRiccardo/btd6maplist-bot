@@ -84,6 +84,7 @@ class EmjHeros(BaseEmjClass):
     geraldo = "<:h_geraldo:1284204366429028423>"
     corvus = "<:h_corvus:1284204325455007940>"
     rosalia = "<:h_rosalia:1284204442270433365>"
+    dan = "<:h_dan:1523071550327361556>"
 
 
 class EmjMisc(BaseEmjClass):
